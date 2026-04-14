@@ -1,3 +1,4 @@
+
 """
 app/models/document.py
 
@@ -21,12 +22,7 @@ class Document(Base):
     doc_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    company_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("companies.company_id", onedelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
+    company_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("ingestion_sessions.session_id", ondelete="CASCADE"),
