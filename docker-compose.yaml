@@ -1,0 +1,18 @@
+name: skyvalves_demo
+
+services:
+  api_center:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    env_file:
+      - .env
+    volumes:
+    # 將你本機的 gcloud 設定目錄掛載到容器內的 root 目錄
+      - ~/.config/gcloud/application_default_credentials.json:/secrets/adc.json:ro
+    environment:
+      - PORT=8080
+      # 告訴程式去「容器內部」的那個掛載路徑找憑證檔案
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/adc.json
