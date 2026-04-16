@@ -3,8 +3,8 @@ app/routers/sessions.py
 
 GET  /sessions/{session_id}         — 查詢 session 狀態（Mirror View polling 用）
 GET  /sessions/{session_id}/chunks  — 取 session 所有 chunks（Mirror View 預覽）
-POST /sessions/{session_id}/confirm — 管理員確認
-POST /sessions/{session_id}/reject  — 管理員拒絕
+POST /sessions/{session_id}/confirm — 管理員確認（Phase 2：JWT 驗證，confirmed_by = user_id）
+POST /sessions/{session_id}/reject  — 管理員拒絕（Phase 2：JWT 驗證）
 """
 import uuid
 from typing import Any
@@ -16,14 +16,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.logging import get_logger
+from app.core.dependencies import require_roles
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import ConfirmResponse, SessionStatusResponse
+from app.schemas.auth import CurrentUser
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 settings = get_settings()
 logger = get_logger("sessions")
+
+_confirm_allowed = require_roles("superadmin", "company_admin")
 
 
 async def _get_session_or_404(session_id: uuid.UUID, db: AsyncSession) -> IngestionSession:
@@ -41,7 +45,6 @@ async def get_session_status(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> SessionStatusResponse:
-    """Mirror View polling 用：取得 session 目前狀態。"""
     session = await _get_session_or_404(session_id, db)
     return SessionStatusResponse(
         session_id=session.session_id,
@@ -56,23 +59,15 @@ async def get_session_chunks(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """
-    Mirror View 預覽用：回傳 session 下所有 chunks 和 document 資訊。
-    包含 has_low_confidence 供前端顯示橘色警示。
-    """
     session = await _get_session_or_404(session_id, db)
 
-    # 取 documents（含 OCR confidence 資訊）
     docs_result = await db.execute(
         select(Document).where(Document.session_id == session_id)
     )
     documents = docs_result.scalars().all()
 
-    # 取 chunks
     chunks_result = await db.execute(
-        select(Chunk).where(
-            Chunk.doc_id.in_([d.doc_id for d in documents])
-        )
+        select(Chunk).where(Chunk.doc_id.in_([d.doc_id for d in documents]))
     )
     chunks = chunks_result.scalars().all()
 
@@ -99,12 +94,8 @@ async def get_session_chunks(
 async def confirm_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> ConfirmResponse:
-    """
-    管理員 Mirror View 確認（§11-3）。
-    status: pending_preview → confirmed
-    Phase 2：confirmed_by 從 JWT token 取真實 user_id。
-    """
     session = await _get_session_or_404(session_id, db)
 
     if session.status != "pending_preview":
@@ -117,14 +108,14 @@ async def confirm_session(
     session.preview_confirmed = True
     await db.flush()
 
-    # Phase 2 接縫點：confirmed_by 改為 current_user.user_id
-    confirmed_by = "dev-admin"
+    confirmed_by = str(current_user.user_id)  # Phase 2 接縫點
 
     logger.info(
         "Mirror View 確認",
         extra={
             "session_id": str(session_id),
             "confirmed_by": confirmed_by,
+            "company_id": str(current_user.company_id) if current_user.company_id else None,
         },
     )
 
@@ -139,10 +130,8 @@ async def confirm_session(
 async def reject_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> ConfirmResponse:
-    """
-    管理員拒絕：status → failed，可重新上傳。
-    """
     session = await _get_session_or_404(session_id, db)
 
     if session.status not in ("pending_preview", "confirmed"):
@@ -157,7 +146,10 @@ async def reject_session(
 
     logger.info(
         "Mirror View 拒絕",
-        extra={"session_id": str(session_id), "confirmed_by": "dev-admin"},
+        extra={
+            "session_id": str(session_id),
+            "rejected_by": str(current_user.user_id),
+        },
     )
 
     return ConfirmResponse(
@@ -171,7 +163,7 @@ def _chunk_to_dict(chunk: Chunk) -> dict[str, Any]:
     return {
         "chunk_id": str(chunk.chunk_id),
         "doc_id": str(chunk.doc_id),
-        "company_id": chunk.company_id,
+        "company_id": str(chunk.company_id),
         "doc_type": chunk.doc_type,
         "rule_version": chunk.rule_version,
         "embed_text": chunk.embed_text,

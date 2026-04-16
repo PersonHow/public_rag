@@ -11,6 +11,9 @@ alembic==1.13.3
 # GCS
 google-cloud-storage==2.18.2
 
+# email
+email-validator==2.3.0
+
 # Document parsing
 python-docx==1.1.2
 pdfplumber==0.11.4   # 保留：upload 時用 python-magic 做 MIME 偵測備用
@@ -35,3 +38,5 @@ tenacity==9.0.0
 
 # Logging
 python-json-logger==2.0.7
+
+

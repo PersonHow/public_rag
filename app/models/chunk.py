@@ -2,6 +2,7 @@
 app/models/chunk.py
 
 chunks 資料表，19 欄位。
+Phase 2：company_id 從 String(100) 改為 UUID（刻意無 FK，denormalized，查詢免 JOIN）。
 embed_text 是唯一用於向量化的欄位，NOT NULL 強制。
 code_gcs_path / drawing_gcs_path 由 pipeline 後處理注入（Phase 4）。
 """
@@ -29,12 +30,13 @@ class Chunk(Base):
         nullable=False,
         index=True,
     )
-    company_id: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True  # 直接帶，查詢免 JOIN
+    # Phase 2：String(100) → UUID，刻意無 FK（denormalized，查詢免 JOIN）
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, index=True
     )
     doc_type: Mapped[str] = mapped_column(String(20), nullable=False)
     rule_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    embed_text: Mapped[str] = mapped_column(Text, nullable=False)  # 向量化唯一來源
+    embed_text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -44,7 +46,7 @@ class Chunk(Base):
     product_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     material: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     dimensions: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    specs: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON 字串
+    specs: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # ── 知識組（Nullable）────────────────────────────────
     situation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

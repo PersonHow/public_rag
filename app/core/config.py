@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     CLOUD_TASKS_QUEUE: str = "rag-ingestion"
     CLOUD_TASKS_MAX_RETRIES: int = 3
     WORKER_BASE_URL: str = "http://localhost:8000"
+    
+    # ── JWT ────────────────────────────────────── 
+    JWT_SECRET_KEY: str = "public_rag_phase_2_secret_jwt_key_for_once_again"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_HOURS: int = 24
 
     # ── Vertex AI / Gemini ───────────────────────────────
     VERTEX_AI_PROJECT: str = ""
