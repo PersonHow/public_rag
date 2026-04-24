@@ -17,6 +17,8 @@ PromptBuilder：
   5. 通用切分規則（固定）
   6. 額外指令（extra_instructions）
   7. 輸出規則（DOCX → JSON array；PDF → wrapper JSON object）
+
+Phase 4：_CHUNK_FIELDS 新增 face 欄位說明。
 """
 import uuid
 from datetime import datetime, timezone
@@ -227,6 +229,7 @@ _CHUNK_FIELDS = """## Chunk 欄位說明
 - applies_to: 適用的產品或零件
 - doc_type: 文件類型（pdf / docx / tap 等）
 - case_id: 同案件多份文件串聯 ID
+- face: 加工面向，如「第一面」、「第二面」，原始文件怎麼寫就怎麼填，無此資訊填 null
 - embed_text: **最重要的欄位**"""
 
 _EMBED_TEXT_RULES = """## embed_text 要求（務必遵守）
@@ -250,6 +253,7 @@ _DOCX_EXAMPLE = """\
     "applies_to": "BV 系列球閥",
     "doc_type": "docx",
     "case_id": null,
+    "face": null,
     "embed_text": "球閥 BV-001（DN50，不銹鋼 316L）在高溫環境下發生洩漏時，需檢查閥座密封圈是否因超溫變形，應更換耐高溫 PTFE 材質密封圈，標準 PTFE 使用溫度上限為 200°C。",
     "code_gcs_path": null,
     "drawing_gcs_path": null

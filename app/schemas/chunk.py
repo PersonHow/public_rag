@@ -3,6 +3,8 @@ app/schemas/chunk.py
 
 Gemini Flash 輸出的 chunk 驗證 schema。
 embed_text 不能為空字串或 null（§8-1 步驟 5）。
+
+Phase 4：新增 face 欄位（加工面向，nullable）。
 """
 from typing import Optional
 
@@ -25,6 +27,10 @@ class GeminiChunkOutput(BaseModel):
     doc_type: str
     case_id: Optional[str] = None
     embed_text: str  # NOT NULL，驗證在下方
+
+    # Phase 4 新增：加工面向（第一面 / 第二面 / null）
+    # 原始文件怎麼寫就怎麼填，Gemini 不 normalize
+    face: Optional[str] = None
 
     # 固定 null（後處理注入）
     code_gcs_path: Optional[str] = None

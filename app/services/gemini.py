@@ -155,14 +155,34 @@ async def _call_gemini_native_api(
                 "Content-Type": "application/json",
             },
         )
-        response.raise_for_status()
+
+    if response.status_code == 429:
+        retry_after = response.headers.get("Retry-After", "unknown")
+        raise httpx.HTTPStatusError(
+            f"Gemini API 請求頻率超限（429），Retry-After: {retry_after}",
+            request=response.request,
+            response=response,
+        )
+    if response.status_code >= 500:
+        raise httpx.HTTPStatusError(
+            f"Gemini API 伺服器錯誤（{response.status_code}），body: {response.text[:200]}",
+            request=response.request,
+            response=response,
+        )
+    response.raise_for_status()
+
+    try:
         data = response.json()
+    except Exception as json_err:
+        raise ValueError(
+            f"Gemini 回傳非 JSON 內容: {json_err}，body 前 200 字: {response.text[:200]}"
+        )
 
     try:
         return data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, TypeError) as e:
         raise ValueError(
-            f"Gemini native API 回應格式異常: {e}，"
+            f"Gemini native API 回應結構異常: {e}，"
             f"原始回應前 300 字: {str(data)[:300]}"
         )
 

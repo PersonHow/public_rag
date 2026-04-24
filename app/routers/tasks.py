@@ -1,7 +1,9 @@
 """
 app/routers/tasks.py
 
-POST /internal/tasks/process-document — Cloud Tasks Worker 端點。
+POST /internal/tasks/process-document  — Cloud Tasks Worker，Gemini 格式轉換
+POST /internal/tasks/ingest-chunks     — Phase 4：向量化 + 寫入 Qdrant（X-Internal-Token）
+POST /internal/tasks/inject-gcs-paths  — Phase 4：TAP 路徑注入（X-Internal-Token）
 
 X-Internal-Token header 驗證。
 Worker 開頭先檢查 session status，若已是 failed 直接回 200。
@@ -11,17 +13,17 @@ Phase 3 變更：
   - company_context 沿著呼叫鏈傳入 gemini 函式
   - rule_version 優先從 company_rules 取，沒有設定 rules 才 fallback 用時間戳
 
-完整處理路徑：
-  docx  → python-docx → Gemini Flash（文字）→ 存 converted/ → chunks 寫 DB
-  pdf   → Gemini Flash（PDF 直讀，視覺理解）→ 存 converted/ → chunks 寫 DB
-  tap/nc → 更新 document status，不建立 chunks
-  dxf    → 更新 document status，不處理
+Phase 4 變更：
+  - _save_chunks_to_db 新增 face 欄位
+  - 新增 ingest_chunks endpoint（從 SQL 讀 chunks → 向量化 → Qdrant upsert）
+  - 新增 inject_gcs_paths endpoint（TAP 路徑注入，全公司範圍，可隨時重跑）
 """
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -34,6 +36,7 @@ from app.models.document import Document
 from app.models.session import IngestionSession
 from app.services import gcs as gcs_service
 from app.services.detector import is_code_file, is_skip_file
+from app.services.embedding import embed_texts
 from app.services.gemini import (
     GeminiMaxRetriesError,
     PdfConversionResult,
@@ -41,12 +44,35 @@ from app.services.gemini import (
     convert_to_chunks,
 )
 from app.services.parser import parse_docx
+from app.services.qdrant_service import delete_chunks_by_ids, upsert_chunks
 from app.services.rules import get_latest_rules, generate_rule_version
 
 router = APIRouter(prefix="/internal/tasks", tags=["internal"])
 settings = get_settings()
 logger = get_logger("tasks")
 
+# ── TAP 面向 → 檔名後綴對照表 ────────────────────────────────────────────────
+# 注入時將 chunk.face 轉換成 TAP 檔名後綴（奇賓機械慣例 + 常見命名）
+# key 統一小寫，查找時一律 .lower() 比對（大小寫不敏感）
+_FACE_TO_SUFFIX: dict[str, str] = {
+    "第一面": "_A_",
+    "面a": "_A_",
+    "op10": "_A_",
+    "第二面": "_B_",
+    "面b": "_B_",
+    "op20": "_B_",
+}
+
+
+def _get_face_suffix(face: str) -> str:
+    """大小寫不敏感的 face → TAP 檔名後綴查找。未知值記錄 warning 並回傳空字串。"""
+    result = _FACE_TO_SUFFIX.get(face.lower())
+    if result is None:
+        logger.warning(f"未知的 face 值: {face!r}，無法比對 TAP 後綴，fallback 不限面向")
+    return result or ""
+
+
+# ── Request / Response Schemas ────────────────────────────────────────────────
 
 class ProcessDocumentRequest(BaseModel):
     session_id: str
@@ -55,10 +81,22 @@ class ProcessDocumentRequest(BaseModel):
     company_id: str
 
 
+class IngestChunksRequest(BaseModel):
+    session_id: str
+
+
+class InjectGcsPathsRequest(BaseModel):
+    company_id: str
+
+
+# ── Token 驗證 ────────────────────────────────────────────────────────────────
+
 def _verify_internal_token(x_internal_token: str = Header(alias="X-Internal-Token")) -> None:
     if x_internal_token != settings.INTERNAL_TOKEN:
         raise HTTPException(status_code=401, detail="無效的 X-Internal-Token")
 
+
+# ── /process-document ─────────────────────────────────────────────────────────
 
 @router.post("/process-document")
 async def process_document(
@@ -121,6 +159,249 @@ async def process_document(
         await db.flush()
         return {"status": "error", "message": str(e)}
 
+
+# ── /ingest-chunks ────────────────────────────────────────────────────────────
+
+@router.post("/ingest-chunks")
+async def ingest_chunks(
+    body: IngestChunksRequest,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(_verify_internal_token),
+) -> dict:
+    """
+    Phase 4 向量寫入 worker。
+    流程：從 SQL 讀 chunks → embed_texts → upsert Qdrant → session done
+
+    Option A 設計（chunks 已在 SQL 中）：
+    - 直接查 SQL，不重新讀 GCS
+    - 冪等：重複執行只是 upsert 覆蓋，不會重複 INSERT
+    """
+    session_id = uuid.UUID(body.session_id)
+    log_extra = {"session_id": str(session_id)}
+
+    # ── 1. 檢查 session ──────────────────────────────────────────────────
+    session_result = await db.execute(
+        select(IngestionSession).where(IngestionSession.session_id == session_id)
+    )
+    session = session_result.scalar_one_or_none()
+    if not session:
+        logger.error("Session 不存在", extra=log_extra)
+        return {"status": "error", "message": "Session 不存在"}
+
+    company_id_str = str(session.company_id)
+    log_extra["company_id"] = company_id_str
+
+    # 非 confirmed 狀態不處理（已 done 或 processing 中的重試保護）
+    if session.status not in ("confirmed", "processing"):
+        logger.info(
+            f"Session 狀態 {session.status}，跳過 ingest-chunks",
+            extra=log_extra,
+        )
+        return {"status": "skipped", "message": f"session status is {session.status}"}
+
+    # ── 2. 取該 session 所有 chunks（從 SQL）────────────────────────────
+    docs_result = await db.execute(
+        select(Document.doc_id).where(Document.session_id == session_id)
+    )
+    doc_ids = [row[0] for row in docs_result.all()]
+
+    if not doc_ids:
+        logger.warning("Session 沒有任何 document，跳過", extra=log_extra)
+        session.status = "done"
+        await db.flush()
+        return {"status": "ok", "chunk_count": 0}
+
+    chunks_result = await db.execute(
+        select(Chunk).where(Chunk.doc_id.in_(doc_ids))
+    )
+    chunks = list(chunks_result.scalars().all())
+
+    if not chunks:
+        logger.warning("Session 沒有任何 chunk，跳過", extra=log_extra)
+        session.status = "done"
+        await db.flush()
+        return {"status": "ok", "chunk_count": 0}
+
+    logger.info(f"ingest-chunks 開始", extra={**log_extra, "chunk_count": len(chunks)})
+    session.status = "processing"
+    await db.flush()
+
+    # 預先收集 chunk_ids，供 Qdrant rollback 使用
+    chunk_ids = [str(c.chunk_id) for c in chunks]
+
+    # ── 3. 批次向量化 ────────────────────────────────────────────────────
+    try:
+        embed_text_list = [c.embed_text for c in chunks]
+        vectors = await embed_texts(embed_text_list, task_type="RETRIEVAL_DOCUMENT")
+    except Exception as e:
+        logger.error(f"embed_texts 失敗: {e}", extra=log_extra)
+        await _mark_session_failed(session, db, reason=f"embedding failed: {e}", log_extra=log_extra)
+        await db.flush()
+        return {"status": "failed", "message": str(e)}
+
+    # ── 4. 組裝 Qdrant points ────────────────────────────────────────────
+    points = [
+        {
+            "id": str(c.chunk_id),
+            "vector": vectors[i],
+            "payload": {
+                "company_id": str(c.company_id),
+                "chunk_id": str(c.chunk_id),
+                "doc_id": str(c.doc_id),
+                "doc_type": c.doc_type,
+                "rule_version": c.rule_version,
+                "face": c.face,
+                "product_name": c.product_name,
+                "product_id": c.product_id,
+                "situation": c.situation,
+                "action": c.action,
+                "embed_text": c.embed_text,  # 保留供 debug
+            },
+        }
+        for i, c in enumerate(chunks)
+    ]
+
+    # ── 5. Upsert Qdrant（失敗時回滾已寫入的向量）────────────────────────
+    try:
+        upsert_chunks(points)
+    except Exception as e:
+        logger.error(f"Qdrant upsert 失敗，嘗試回滾: {e}", extra=log_extra)
+        try:
+            delete_chunks_by_ids(chunk_ids)
+        except Exception as rollback_err:
+            logger.error(f"Qdrant rollback 失敗: {rollback_err}", extra=log_extra)
+        await _mark_session_failed(session, db, reason=f"qdrant upsert failed: {e}", log_extra=log_extra)
+        await db.flush()
+        return {"status": "failed", "message": str(e)}
+
+    # ── 6. 完成 ──────────────────────────────────────────────────────────
+    session.status = "done"
+    await db.flush()
+
+    logger.info(
+        "ingest-chunks 完成",
+        extra={**log_extra, "chunk_count": len(chunks), "phase": "phase4"},
+    )
+    return {"status": "ok", "chunk_count": len(chunks)}
+
+
+# ── /inject-gcs-paths ────────────────────────────────────────────────────────
+
+@router.post("/inject-gcs-paths")
+async def inject_gcs_paths(
+    body: InjectGcsPathsRequest,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(_verify_internal_token),
+) -> dict:
+    """
+    Phase 4 TAP 路徑注入。
+    對指定 company 的所有 chunks 補入 code_gcs_path。
+    設計為冪等：可隨時重跑，不影響已正確注入的 chunks。
+    範圍：全公司（不限 session），解決跨 session 分批上傳問題。
+
+    比對邏輯：
+      1. product_id in TAP filename（主鍵比對）
+      2. face → 檔名後綴（_A_ / _B_）精準對應
+      3. 無法比對 face → fallback 取同 product_id 最新上傳的 TAP
+      4. 找不到 TAP → code_gcs_path 保持 null
+    """
+    company_id = uuid.UUID(body.company_id)
+    company_id_str = str(company_id)
+    log_extra = {"company_id": company_id_str, "phase": "phase4"}
+
+    # ── 1. 取全公司所有 TAP/NC documents ────────────────────────────────
+    tap_docs_result = await db.execute(
+        select(Document).where(
+            Document.company_id == company_id,
+            Document.doc_type.in_(["tap", "nc"]),
+        )
+    )
+    tap_docs = list(tap_docs_result.scalars().all())
+
+    if not tap_docs:
+        logger.info("該公司無 TAP/NC 文件，跳過注入", extra=log_extra)
+        return {"status": "ok", "injected_count": 0}
+
+    # ── 2. 建立 TAP 快查表 ────────────────────────────────────────────────
+    # tap_by_product_id: { product_id_fragment: [Document, ...] }（依 created_at desc 排序）
+    # 注意：TAP 的 product_id 在 gcs_raw_path 的最後一段檔名裡
+    tap_map: dict[str, list[Document]] = {}
+    for doc in sorted(tap_docs, key=lambda d: d.created_at, reverse=True):
+        filename = doc.gcs_raw_path.split("/")[-1]
+        tap_map.setdefault(filename, []).append(doc)
+
+    logger.info(
+        f"TAP/NC 文件載入完成",
+        extra={**log_extra, "tap_count": len(tap_docs)},
+    )
+
+    # ── 3. 取全公司 code_gcs_path = null 且有 product_id 的 chunks ──────
+    chunks_result = await db.execute(
+        select(Chunk).where(
+            Chunk.company_id == company_id,
+            Chunk.product_id.isnot(None),
+            Chunk.code_gcs_path.is_(None),
+        )
+    )
+    chunks = list(chunks_result.scalars().all())
+
+    if not chunks:
+        logger.info("無需注入的 chunks（已全部有 code_gcs_path 或無 product_id）", extra=log_extra)
+        return {"status": "ok", "injected_count": 0}
+
+    # ── 4. 比對 + 注入 ────────────────────────────────────────────────────
+    injected_count = 0
+
+    for chunk in chunks:
+        pid = chunk.product_id  # e.g. "A034-189010-1"
+        target_suffix = _get_face_suffix(chunk.face) if chunk.face else ""
+
+        matched_doc: Optional[Document] = None
+
+        # 精準比對：product_id in filename + face suffix
+        for filename, docs in tap_map.items():
+            if pid not in filename:
+                continue
+            if target_suffix and target_suffix in filename:
+                matched_doc = docs[0]  # 已按 created_at desc 排序，取最新
+                break
+            # 暫存 fallback（product_id 符合但 face 沒比到）
+            if not matched_doc:
+                matched_doc = docs[0]
+
+        # 有 face 但沒比到精準 → 使用 fallback（已設在上方），記錄 warning
+        if chunk.face and target_suffix and matched_doc:
+            matched_filename = matched_doc.gcs_raw_path.split("/")[-1]
+            if target_suffix not in matched_filename:
+                logger.warning(
+                    f"face 精準比對失敗，使用 fallback TAP",
+                    extra={
+                        **log_extra,
+                        "chunk_id": str(chunk.chunk_id),
+                        "product_id": pid,
+                        "face": chunk.face,
+                        "fallback_file": matched_filename,
+                    },
+                )
+
+        if matched_doc:
+            chunk.code_gcs_path = matched_doc.gcs_raw_path
+            injected_count += 1
+
+    await db.flush()
+
+    logger.info(
+        "inject-gcs-paths 完成",
+        extra={**log_extra, "injected_count": injected_count, "total_chunks": len(chunks)},
+    )
+    return {
+        "status": "ok",
+        "injected_count": injected_count,
+        "total_chunks": len(chunks),
+    }
+
+
+# ── 共用輔助函式 ──────────────────────────────────────────────────────────────
 
 async def _build_company_context(db: AsyncSession, company_id: uuid.UUID) -> dict:
     """
@@ -278,9 +559,8 @@ async def _save_chunks_to_db(
     """
     chunks 存 GCS converted/ + 寫 Cloud SQL。
 
-    Phase 3 變更：
-      rule_version 從 company_context 取（已在 _build_company_context 決定）。
-      公司有 rules → 用 rules 的版本號；沒有 rules → 用時間戳版本號。
+    Phase 3 變更：rule_version 從 company_context 取。
+    Phase 4 變更：新增 face 欄位。
     """
     company_id_uuid: uuid.UUID = session.company_id
     company_id_str = str(company_id_uuid)
@@ -300,7 +580,7 @@ async def _save_chunks_to_db(
     for chunk_output in chunk_outputs:
         chunk = Chunk(
             doc_id=document.doc_id,
-            company_id=company_id_uuid,      # UUID，不是字串
+            company_id=company_id_uuid,
             rule_version=rule_version,
             doc_type=chunk_output.doc_type,
             embed_text=chunk_output.embed_text,
@@ -314,6 +594,7 @@ async def _save_chunks_to_db(
             reason=chunk_output.reason,
             applies_to=chunk_output.applies_to,
             case_id=chunk_output.case_id,
+            face=chunk_output.face,           # Phase 4 新增
             code_gcs_path=None,
             drawing_gcs_path=None,
         )

@@ -3,6 +3,10 @@ app/main.py
 
 FastAPI 應用入口。
 所有 router 在此掛載，logging 在 startup 設定。
+
+Phase 4 變更：
+  - version 4.0.0
+  - startup event 初始化 Qdrant collection（冪等）
 """
 import logging
 
@@ -21,8 +25,8 @@ setup_logging(level=logging.DEBUG if settings.app_env == "development" else logg
 
 app = FastAPI(
     title="多租戶 RAG 生產助理系統",
-    description="Phase 3 — 規則管理系統",
-    version="3.0.0",
+    description="Phase 4 — 向量寫入",
+    version="4.0.0",
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
@@ -35,7 +39,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ──────────────────────────────────────────────────────────────────
+
+# ── Startup Event ─────────────────────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """
+    Phase 4：確保 Qdrant collection 存在。
+    冪等：已存在跳過，不報錯。
+    """
+    import logging
+    startup_logger = logging.getLogger("startup")
+    try:
+        from app.services.qdrant_service import init_collection
+        init_collection()
+        startup_logger.info("Qdrant collection 初始化完成")
+    except Exception as e:
+        # 啟動不因 Qdrant 不可達而失敗（本機開發可能尚未連線）
+        startup_logger.warning(f"Qdrant 初始化失敗（若為本機開發可忽略）: {e}")
+
+
+# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(health.router)
 app.include_router(upload.router)
 app.include_router(sessions.router)
@@ -55,5 +79,5 @@ app.include_router(rules.router)
 async def root() -> dict:
     return {
         "service": "RAG Production Assistant",
-        "phase": "Phase 3 — 規則管理系統",
+        "phase": "Phase 4 — 向量寫入",
     }

@@ -25,7 +25,7 @@ google-cloud-tasks==2.16.5
 google-auth==2.35.0
 google-auth-httplib2==0.2.0
 openai==1.51.0       # OpenAI-compat API for Vertex AI（DOCX 路徑用）
-httpx==0.27.2        # Vertex AI 原生 REST API（PDF 路徑用）
+httpx==0.27.2        # Vertex AI 原生 REST API（PDF 路徑、Embedding 路徑用）
 
 # Pydantic
 pydantic==2.9.2
@@ -39,4 +39,5 @@ tenacity==9.0.0
 # Logging
 python-json-logger==2.0.7
 
-
+# Phase 4 — 向量寫入
+qdrant-client==1.12.1

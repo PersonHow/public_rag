@@ -3,8 +3,13 @@ app/routers/sessions.py
 
 GET  /sessions/{session_id}         — 查詢 session 狀態（Mirror View polling 用）
 GET  /sessions/{session_id}/chunks  — 取 session 所有 chunks（Mirror View 預覽）
-POST /sessions/{session_id}/confirm — 管理員確認（Phase 2：JWT 驗證，confirmed_by = user_id）
-POST /sessions/{session_id}/reject  — 管理員拒絕（Phase 2：JWT 驗證）
+POST /sessions/{session_id}/confirm — 管理員確認（Phase 4：確認後自動派送 ingest-chunks）
+POST /sessions/{session_id}/reject  — 管理員拒絕
+
+Phase 4 變更：
+  confirm_session 確認後，呼叫 enqueue_ingest_chunks() 派送向量化任務。
+  若 Cloud Tasks 派送失敗，記錄 warning 但不影響 confirm 回應（可手動補打 ingest-chunks）。
+  _chunk_to_dict 新增 face 欄位。
 """
 import uuid
 from typing import Any
@@ -22,6 +27,7 @@ from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import ConfirmResponse, SessionStatusResponse
 from app.schemas.auth import CurrentUser
+from app.services.tasks import enqueue_ingest_chunks
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 settings = get_settings()
@@ -108,7 +114,7 @@ async def confirm_session(
     session.preview_confirmed = True
     await db.flush()
 
-    confirmed_by = str(current_user.user_id)  # Phase 2 接縫點
+    confirmed_by = str(current_user.user_id)
 
     logger.info(
         "Mirror View 確認",
@@ -116,13 +122,28 @@ async def confirm_session(
             "session_id": str(session_id),
             "confirmed_by": confirmed_by,
             "company_id": str(current_user.company_id) if current_user.company_id else None,
+            "phase": "phase4",
         },
     )
+
+    # ── Phase 4：派送 ingest-chunks Cloud Tasks ───────────────────────────
+    # 失敗不影響 confirm 回應，可手動補打 POST /internal/tasks/ingest-chunks
+    try:
+        task_name = enqueue_ingest_chunks(session_id)
+        logger.info(
+            "ingest-chunks 任務已派送",
+            extra={"session_id": str(session_id), "task_name": task_name},
+        )
+    except Exception as e:
+        logger.warning(
+            f"ingest-chunks 任務派送失敗（可手動補打）: {e}",
+            extra={"session_id": str(session_id)},
+        )
 
     return ConfirmResponse(
         session_id=session_id,
         status="confirmed",
-        message="Session 已確認，等待批次寫入（Phase 4 實作）",
+        message="Session 已確認，向量化任務已派送",
     )
 
 
@@ -177,6 +198,7 @@ def _chunk_to_dict(chunk: Chunk) -> dict[str, Any]:
         "reason": chunk.reason,
         "applies_to": chunk.applies_to,
         "case_id": chunk.case_id,
+        "face": chunk.face,                   # Phase 4 新增
         "code_gcs_path": chunk.code_gcs_path,
         "drawing_gcs_path": chunk.drawing_gcs_path,
         "created_at": chunk.created_at.isoformat() if chunk.created_at else None,

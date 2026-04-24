@@ -9,6 +9,10 @@ app/core/config.py
   Document AI 相關設定全數移除。
   所有 PDF 直接送 Gemini Flash 視覺理解，不再走 OCR pipeline。
   min_confidence 欄位不再使用（has_low_confidence 語意改為 Gemini quality flag）。
+
+Phase 4 新增：
+  QDRANT_HOST / QDRANT_PORT / QDRANT_API_KEY
+  GEMINI_EMBEDDING_MODEL
 """
 from functools import lru_cache
 from pydantic import ConfigDict
@@ -33,7 +37,7 @@ class Settings(BaseSettings):
 
     # ── GCS ──────────────────────────────────────────────
     GCS_BUCKET_NAME: str = "your-rag-bucket"
-    GCS_PROJECT: str=""
+    GCS_PROJECT: str = ""
 
     # ── Cloud Tasks ──────────────────────────────────────
     CLOUD_TASKS_PROJECT: str = ""
@@ -41,8 +45,8 @@ class Settings(BaseSettings):
     CLOUD_TASKS_QUEUE: str = "rag-ingestion"
     CLOUD_TASKS_MAX_RETRIES: int = 3
     WORKER_BASE_URL: str = "http://localhost:8000"
-    
-    # ── JWT ────────────────────────────────────── 
+
+    # ── JWT ──────────────────────────────────────────────
     JWT_SECRET_KEY: str = "public_rag_phase_2_secret_jwt_key_for_once_again"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24
@@ -52,7 +56,16 @@ class Settings(BaseSettings):
     VERTEX_AI_LOCATION: str = "us-central1"
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_MAX_RETRIES: int = 3
-    GEMINI_PDF_TIMEOUT_SEC:int = 120
+    GEMINI_PDF_TIMEOUT_SEC: int = 120
+
+    # ── Gemini Embedding（Phase 4）───────────────────────
+    # gemini-embedding-001：每次 1 筆，output_dimensionality=768 截短
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+
+    # ── Qdrant（Phase 4）────────────────────────────────
+    QDRANT_HOST: str = "34.80.37.70"  # ← 填入 Qdrant VM 內網 IP
+    QDRANT_PORT: int = 6334
+    QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
 
     # ── GCS 路徑規則（唯一定義處）────────────────────────
     # raw/  → 含 doc_id 層防止同名覆蓋

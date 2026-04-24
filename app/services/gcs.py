@@ -4,6 +4,7 @@ app/services/gcs.py
 GCS 操作：上傳、下載、JSON 讀寫。
 所有路徑由 config.py 的方法生成，不在此處拼接路徑。
 """
+import asyncio
 import json
 from typing import Any
 
@@ -45,10 +46,17 @@ async def upload_file_from_path(gcs_path: str, local_path: str, content_type: st
     return f"gs://{settings.GCS_BUCKET_NAME}/{gcs_path}"
 
 
-async def download_bytes(gcs_path: str) -> bytes:
+async def download_bytes(gcs_path: str, timeout_sec: int = 30) -> bytes:
     bucket = _get_bucket()
     blob = bucket.blob(gcs_path)
-    return blob.download_as_bytes()
+    loop = asyncio.get_running_loop()
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(None, blob.download_as_bytes),
+            timeout=timeout_sec,
+        )
+    except asyncio.TimeoutError:
+        raise TimeoutError(f"GCS 下載逾時（{timeout_sec}s）: {gcs_path}")
 
 
 async def upload_json(gcs_path: str, data: Any) -> str:
