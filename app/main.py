@@ -12,17 +12,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.routers import health, sessions, tasks, upload
-from app.routers import auth, companies, users, internal_setup  # Phase 2 Add
+from app.routers import auth, companies, users, internal_setup  # Phase 2
+from app.routers import rules                                    # Phase 3
 
 settings = get_settings()
 
-# JSON structured logging
 setup_logging(level=logging.DEBUG if settings.app_env == "development" else logging.INFO)
 
 app = FastAPI(
     title="多租戶 RAG 生產助理系統",
-    description="Phase 2 — 多租戶基礎",
-    version="2.0.0",
+    description="Phase 3 — 規則管理系統",
+    version="3.0.0",
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
@@ -47,10 +47,13 @@ app.include_router(companies.router)
 app.include_router(users.router)
 app.include_router(internal_setup.router)
 
+# Phase 3
+app.include_router(rules.router)
+
 
 @app.get("/")
 async def root() -> dict:
     return {
         "service": "RAG Production Assistant",
-        "phase": "Phase 2 — 多租戶基礎",
+        "phase": "Phase 3 — 規則管理系統",
     }
