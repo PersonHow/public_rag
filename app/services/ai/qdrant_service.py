@@ -1,5 +1,5 @@
 """
-app/services/qdrant_service.py
+app/services/ai/qdrant_service.py
 
 Qdrant 操作封裝。
 

@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.services.gcs import check_gcs_connection
+from app.services.storage.gcs import check_gcs_connection
 
 router = APIRouter(tags=["health"])
 

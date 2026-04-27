@@ -1,5 +1,5 @@
 """
-app/services/gemini.py
+app/services/ai/gemini.py
 
 Vertex AI Gemini Flash 格式轉換服務。
 

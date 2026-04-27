@@ -27,7 +27,7 @@ from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import ConfirmResponse, SessionStatusResponse
 from app.schemas.auth import CurrentUser
-from app.services.tasks import enqueue_ingest_chunks
+from app.services.storage.tasks import enqueue_ingest_chunks
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 settings = get_settings()
@@ -127,7 +127,6 @@ async def confirm_session(
     )
 
     # ── Phase 4：派送 ingest-chunks Cloud Tasks ───────────────────────────
-    # 失敗不影響 confirm 回應，可手動補打 POST /internal/tasks/ingest-chunks
     try:
         task_name = enqueue_ingest_chunks(session_id)
         logger.info(
@@ -135,9 +134,17 @@ async def confirm_session(
             extra={"session_id": str(session_id), "task_name": task_name},
         )
     except Exception as e:
-        logger.warning(
-            f"ingest-chunks 任務派送失敗（可手動補打）: {e}",
+        # 派送失敗：回滾 session 狀態，讓管理員可以重試 confirm
+        session.status = "pending_preview"
+        session.preview_confirmed = False
+        await db.flush()
+        logger.error(
+            f"ingest-chunks 任務派送失敗，session 已回滾至 pending_preview: {e}",
             extra={"session_id": str(session_id)},
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="向量化任務派送失敗，請稍後重試確認",
         )
 
     return ConfirmResponse(

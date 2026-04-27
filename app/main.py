@@ -15,9 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.routers import health, sessions, tasks, upload
-from app.routers import auth, companies, users, internal_setup  # Phase 2
-from app.routers import rules                                    # Phase 3
+from app.routers import health, sessions, upload
+from app.routers import auth, rules                             # Phase 2 / Phase 3
+from app.routers.internal import tasks
+from app.routers.admin import companies, users, internal_setup  # Phase 2
 
 settings = get_settings()
 
@@ -47,16 +48,18 @@ async def startup_event() -> None:
     """
     Phase 4：確保 Qdrant collection 存在。
     冪等：已存在跳過，不報錯。
+    Production 環境：初始化失敗直接 raise，讓 Cloud Run 拒絕啟動。
     """
-    import logging
     startup_logger = logging.getLogger("startup")
     try:
-        from app.services.qdrant_service import init_collection
+        from app.services.ai.qdrant_service import init_collection
         init_collection()
         startup_logger.info("Qdrant collection 初始化完成")
     except Exception as e:
-        # 啟動不因 Qdrant 不可達而失敗（本機開發可能尚未連線）
-        startup_logger.warning(f"Qdrant 初始化失敗（若為本機開發可忽略）: {e}")
+        if settings.app_env == "production":
+            startup_logger.error(f"Qdrant 初始化失敗，production 環境拒絕啟動: {e}")
+            raise
+        startup_logger.warning(f"Qdrant 初始化失敗（本機開發可忽略）: {e}")
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────

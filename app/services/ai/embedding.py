@@ -1,5 +1,5 @@
 """
-app/services/embedding.py
+app/services/ai/embedding.py
 
 Gemini Embedding 001 向量化服務。
 使用 Vertex AI 原生 REST API（httpx async）。

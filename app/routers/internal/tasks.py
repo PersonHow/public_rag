@@ -1,5 +1,5 @@
 """
-app/routers/tasks.py
+app/routers/internal/tasks.py
 
 POST /internal/tasks/process-document  — Cloud Tasks Worker，Gemini 格式轉換
 POST /internal/tasks/ingest-chunks     — Phase 4：向量化 + 寫入 Qdrant（X-Internal-Token）
@@ -34,17 +34,17 @@ from app.models.chunk import Chunk
 from app.models.company import Company
 from app.models.document import Document
 from app.models.session import IngestionSession
-from app.services import gcs as gcs_service
-from app.services.detector import is_code_file, is_skip_file
-from app.services.embedding import embed_texts
-from app.services.gemini import (
+from app.services.storage import gcs as gcs_service
+from app.services.document.detector import is_code_file, is_skip_file
+from app.services.ai.embedding import embed_texts
+from app.services.ai.gemini import (
     GeminiMaxRetriesError,
     PdfConversionResult,
     convert_pdf_to_chunks,
     convert_to_chunks,
 )
-from app.services.parser import parse_docx
-from app.services.qdrant_service import delete_chunks_by_ids, upsert_chunks
+from app.services.document.parser import parse_docx
+from app.services.ai.qdrant_service import delete_chunks_by_ids, upsert_chunks
 from app.services.rules import get_latest_rules, generate_rule_version
 
 router = APIRouter(prefix="/internal/tasks", tags=["internal"])
@@ -75,23 +75,23 @@ def _get_face_suffix(face: str) -> str:
 # ── Request / Response Schemas ────────────────────────────────────────────────
 
 class ProcessDocumentRequest(BaseModel):
-    session_id: str
-    doc_id: str
+    session_id: uuid.UUID
+    doc_id: uuid.UUID
     doc_type: str
-    company_id: str
+    company_id: uuid.UUID
 
 
 class IngestChunksRequest(BaseModel):
-    session_id: str
+    session_id: uuid.UUID
 
 
 class InjectGcsPathsRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
 
 
 # ── Token 驗證 ────────────────────────────────────────────────────────────────
 
-def _verify_internal_token(x_internal_token: str = Header(alias="X-Internal-Token")) -> None:
+def _verify_internal_token(x_internal_token: str = Header(..., alias="X-Internal-Token")) -> None:
     if x_internal_token != settings.INTERNAL_TOKEN:
         raise HTTPException(status_code=401, detail="無效的 X-Internal-Token")
 
@@ -104,10 +104,10 @@ async def process_document(
     db: AsyncSession = Depends(get_db),
     _: None = Depends(_verify_internal_token),
 ) -> dict:
-    session_id = uuid.UUID(body.session_id)
-    doc_id = uuid.UUID(body.doc_id)
+    session_id: uuid.UUID = body.session_id
+    doc_id: uuid.UUID = body.doc_id
     doc_type: str = body.doc_type
-    company_id_str: str = body.company_id
+    company_id_str: str = str(body.company_id)
 
     log_extra = {"session_id": str(session_id), "doc_id": str(doc_id), "company_id": company_id_str}
 
@@ -176,12 +176,14 @@ async def ingest_chunks(
     - 直接查 SQL，不重新讀 GCS
     - 冪等：重複執行只是 upsert 覆蓋，不會重複 INSERT
     """
-    session_id = uuid.UUID(body.session_id)
+    session_id: uuid.UUID = body.session_id
     log_extra = {"session_id": str(session_id)}
 
-    # ── 1. 檢查 session ──────────────────────────────────────────────────
+    # ── 1. 檢查 session（FOR UPDATE 防止並發重複處理）────────────────────
     session_result = await db.execute(
-        select(IngestionSession).where(IngestionSession.session_id == session_id)
+        select(IngestionSession)
+        .where(IngestionSession.session_id == session_id)
+        .with_for_update()
     )
     session = session_result.scalar_one_or_none()
     if not session:
@@ -305,7 +307,7 @@ async def inject_gcs_paths(
       3. 無法比對 face → fallback 取同 product_id 最新上傳的 TAP
       4. 找不到 TAP → code_gcs_path 保持 null
     """
-    company_id = uuid.UUID(body.company_id)
+    company_id: uuid.UUID = body.company_id
     company_id_str = str(company_id)
     log_extra = {"company_id": company_id_str, "phase": "phase4"}
 

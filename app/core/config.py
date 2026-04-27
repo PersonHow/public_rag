@@ -15,7 +15,7 @@ Phase 4 新增：
   GEMINI_EMBEDDING_MODEL
 """
 from functools import lru_cache
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     # Phase 1 固定值。Phase 2 改為從 JWT token 取，不改此定義。
     DEFAULT_COMPANY_ID: str = "dev-company"
 
-    # Cloud Tasks worker 驗證用
-    INTERNAL_TOKEN: str = "dev-internal-token-change-in-prod"
+    # Cloud Tasks worker 驗證用（必須透過環境變數設定，無安全預設值）
+    INTERNAL_TOKEN: str 
 
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_db"
@@ -47,7 +47,8 @@ class Settings(BaseSettings):
     WORKER_BASE_URL: str = "http://localhost:8000"
 
     # ── JWT ──────────────────────────────────────────────
-    JWT_SECRET_KEY: str = "public_rag_phase_2_secret_jwt_key_for_once_again"
+    # 無安全預設值；必須在 .env 中設定（openssl rand -hex 32）
+    JWT_SECRET_KEY: str 
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24
 
@@ -63,9 +64,28 @@ class Settings(BaseSettings):
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # ── Qdrant（Phase 4）────────────────────────────────
-    QDRANT_HOST: str = "34.80.37.70"  # ← 填入 Qdrant VM 內網 IP
-    QDRANT_PORT: int = 6334
+    QDRANT_HOST: str = ""
+    QDRANT_PORT: int = 6333
     QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
+
+    @model_validator(mode="after")
+    def _validate_required_in_production(self) -> "Settings":
+        """Production 環境強制要求關鍵欄位不得為空，防止錯誤設定上線。"""
+        if self.app_env != "production":
+            return self
+        required = {
+            "JWT_SECRET_KEY": self.JWT_SECRET_KEY,
+            "INTERNAL_TOKEN": self.INTERNAL_TOKEN,
+            "DATABASE_URL": self.DATABASE_URL,
+            "GCS_PROJECT": self.GCS_PROJECT,
+            "CLOUD_TASKS_PROJECT": self.CLOUD_TASKS_PROJECT,
+            "VERTEX_AI_PROJECT": self.VERTEX_AI_PROJECT,
+            "QDRANT_HOST": self.QDRANT_HOST,
+        }
+        missing = [k for k, v in required.items() if not v]
+        if missing:
+            raise ValueError(f"Production 環境缺少必填設定: {', '.join(missing)}")
+        return self
 
     # ── GCS 路徑規則（唯一定義處）────────────────────────
     # raw/  → 含 doc_id 層防止同名覆蓋

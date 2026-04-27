@@ -23,9 +23,9 @@ from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import UploadResponse
 from app.schemas.auth import CurrentUser
-from app.services import gcs as gcs_service
-from app.services import tasks as tasks_service
-from app.services.detector import detect_doc_type_from_filename
+from app.services.storage import gcs as gcs_service
+from app.services.storage import tasks as tasks_service
+from app.services.document.detector import detect_doc_type_from_filename
 
 router = APIRouter(tags=["upload"])
 settings = get_settings()
