@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # ── Cloud Tasks ──────────────────────────────────────
     CLOUD_TASKS_PROJECT: str = ""
     CLOUD_TASKS_LOCATION: str = "asia-east1"
-    CLOUD_TASKS_QUEUE: str = "rag-ingestion"
+    CLOUD_TASKS_QUEUE: str = "onceagain-rag-ingestion"
     CLOUD_TASKS_MAX_RETRIES: int = 3
     WORKER_BASE_URL: str = "http://localhost:8000"
 
@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = ""
     QDRANT_PORT: int = 6333
     QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
+    QDRANT_COLLECTION_NAME: str = ""
 
     @model_validator(mode="after")
     def _validate_required_in_production(self) -> "Settings":

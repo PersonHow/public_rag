@@ -1,0 +1,47 @@
+<div class="page-head">
+  <span class="px-stamp rust">MOCK · PHASE 3</span>
+  <h1>對話</h1>
+  <p style="color:var(--muted);font-size:13px;margin:0">詢問知識庫中的文件內容（Chat API Phase 3 後接通，現為模擬回應）</p>
+</div>
+
+<div class="mock-banner">
+  <span class="pill rust">MOCK</span>
+  目前為模擬模式，回應來自靜態資料。Phase 3 接通 <code>/chat/completions</code> 後即為真實 RAG 回答。
+</div>
+
+<div class="chat-wrap">
+  <div class="messages" #msgBox>
+    @for (msg of messages(); track msg.id) {
+      <div class="msg" [class.me]="msg.role==='user'" [class.bot]="msg.role==='bot'">
+        <div class="av">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
+        <div>
+          <div class="bubble">
+            @if (msg.typing) {
+              <div class="typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+            } @else {
+              {{ msg.text }}
+            }
+          </div>
+          @if (msg.citations?.length) {
+            <div class="citations">
+              @for (c of msg.citations; track c) {
+                <button class="cite">§ {{ c }}</button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="composer">
+    <textarea [(ngModel)]="inputText" rows="1" placeholder="詢問知識庫… (Enter 送出)"
+              (keydown.enter)="onEnter($event)">
+    </textarea>
+    <button class="btn primary sm" (click)="send()" [disabled]="!inputText.trim() || botTyping()">
+      送出 ▸
+    </button>
+  </div>
+</div>

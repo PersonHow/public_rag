@@ -1,0 +1,27 @@
+<div class="stepper">
+  @if (step1Done()) {
+    <a class="step done" routerLink="/upload">
+      <span class="num">✓</span>
+      <div><div class="lab">STEP 01</div><div class="name">上傳資料</div></div>
+    </a>
+  } @else {
+    <button class="step active">
+      <span class="num">01</span>
+      <div><div class="lab">STEP 01</div><div class="name">上傳資料</div></div>
+    </button>
+  }
+
+  <div class="bar" [class.done]="bar1Done()"></div>
+
+  <button class="step" [class.active]="step2Active()">
+    <span class="num">02</span>
+    <div><div class="lab">STEP 02</div><div class="name">預覽 / 確認</div></div>
+  </button>
+
+  <div class="bar" [class.done]="bar2Done()"></div>
+
+  <button class="step" [class.done]="step3Done()">
+    <span class="num">{{ step3Done() ? '✓' : '03' }}</span>
+    <div><div class="lab">STEP 03</div><div class="name">入向量</div></div>
+  </button>
+</div>

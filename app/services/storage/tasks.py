@@ -1,10 +1,13 @@
 """
-app/services/tasks.py
+app/services/storage/tasks.py
 
 Cloud Tasks 任務派送。
 本機開發：直接打 /internal/tasks/process-document（見 dev_trigger.py）。
 
 Phase 4 新增：enqueue_ingest_chunks()
+
+⚠ retry_config 已移除：Cloud Tasks HTTP target 不支援在 task body 內設定
+  retry_config，需在 Queue 層級設定（GCP Console → Cloud Tasks → Queue 設定）。
 """
 import json
 import uuid
@@ -27,8 +30,7 @@ def enqueue_process_document(
     """
     發送 Cloud Tasks 任務，觸發 Worker 處理文件。
     回傳 task name。
-
-    最大重試次數：3 次（更新版決策 3）。
+    重試次數由 Queue 層級設定（非 task body）。
     """
     client = tasks_v2.CloudTasksClient()
     queue_path = client.queue_path(
@@ -44,20 +46,15 @@ def enqueue_process_document(
         "company_id": company_id,
     }).encode("utf-8")
 
-    worker_url = f"{settings.WORKER_BASE_URL}/internal/tasks/process-document"
-
     task = {
         "http_request": {
             "http_method": tasks_v2.HttpMethod.POST,
-            "url": worker_url,
+            "url": f"{settings.WORKER_BASE_URL}/internal/tasks/process-document",
             "headers": {
                 "Content-Type": "application/json",
                 "X-Internal-Token": settings.INTERNAL_TOKEN,
             },
             "body": payload,
-        },
-        "retry_config": {
-            "max_attempts": settings.CLOUD_TASKS_MAX_RETRIES,
         },
     }
 
@@ -93,20 +90,15 @@ def enqueue_ingest_chunks(session_id: uuid.UUID) -> str:
         "session_id": str(session_id),
     }).encode("utf-8")
 
-    worker_url = f"{settings.WORKER_BASE_URL}/internal/tasks/ingest-chunks"
-
     task = {
         "http_request": {
             "http_method": tasks_v2.HttpMethod.POST,
-            "url": worker_url,
+            "url": f"{settings.WORKER_BASE_URL}/internal/tasks/ingest-chunks",
             "headers": {
                 "Content-Type": "application/json",
                 "X-Internal-Token": settings.INTERNAL_TOKEN,
             },
             "body": payload,
-        },
-        "retry_config": {
-            "max_attempts": settings.CLOUD_TASKS_MAX_RETRIES,
         },
     }
 

@@ -11,6 +11,7 @@ collection: "chunks"，768 維，Cosine distance
   upsert_chunks()    — 批次寫入向量 + payload，每批 50 筆
   search()           — Phase 5 語意搜尋，強制 company_id filter
 """
+
 from typing import Any, Optional
 
 from qdrant_client import QdrantClient
@@ -22,6 +23,11 @@ from qdrant_client.models import (
     PayloadSchemaType,
     PointStruct,
     VectorParams,
+    ScalarQuantization,
+    ScalarQuantizationConfig,
+    ScalarType,
+    HnswConfigDiff,
+    QuantizationSearchParams,
 )
 
 from app.core.config import get_settings
@@ -30,7 +36,7 @@ from app.core.logging import get_logger
 settings = get_settings()
 logger = get_logger("qdrant")
 
-COLLECTION_NAME = "chunks"
+COLLECTION_NAME = settings.QDRANT_COLLECTION_NAME
 VECTOR_SIZE = 768
 UPSERT_BATCH_SIZE = 50
 
@@ -59,7 +65,18 @@ def init_collection() -> None:
 
     client.create_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+        vectors_config=VectorParams(
+            size=VECTOR_SIZE,
+            distance=Distance.COSINE,
+            hnsw_config=HnswConfigDiff(m=16),  # 預設值，精準度優先
+        ),
+        quantization_config=ScalarQuantization(
+            scalar=ScalarQuantizationConfig(
+                type=ScalarType.INT8,
+                quantile=0.99,  # 過濾極端值，保護精準度
+                always_ram=True,  # 量化向量常駐 RAM，加速搜尋
+            )
+        ),
     )
 
     # Payload index 加速 filter 查詢

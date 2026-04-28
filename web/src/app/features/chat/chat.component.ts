@@ -1,4 +1,4 @@
-import { Component, signal, computed, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, signal, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 interface Message {
@@ -31,106 +31,8 @@ const MOCK_RESPONSES: Array<{ trigger: RegExp; answer: string; citations: string
   selector: 'app-chat',
   standalone: true,
   imports: [FormsModule],
-  styles: [`
-    :host { display: flex; flex-direction: column; height: calc(100vh - 120px); }
-    .chat-wrap { display: grid; grid-template-rows: 1fr auto; flex: 1; overflow: hidden; }
-    .messages { overflow: auto; padding: 8px 0; display: flex; flex-direction: column; gap: 14px; }
-    .msg { display: flex; gap: 10px; max-width: 740px; }
-    .msg.me { margin-left: auto; flex-direction: row-reverse; }
-    .av {
-      width: 30px; height: 30px; display: grid; place-items: center;
-      flex-shrink: 0; font-size: 11px; font-weight: 700;
-      border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink);
-      font-family: var(--font-mono);
-    }
-    .msg.me .av { background: var(--rust); color: var(--cream); }
-    .msg.bot .av { background: var(--teal); color: var(--cream); }
-    .bubble {
-      padding: 10px 14px; font-size: 13.5px; line-height: 1.65;
-      background: var(--bg-2); border: 1.5px solid var(--ink);
-      box-shadow: 3px 3px 0 var(--ink); font-family: var(--font);
-    }
-    .msg.me .bubble { background: var(--ink); color: var(--cream); box-shadow: 3px 3px 0 var(--rust); }
-    .citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .cite {
-      font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-      background: var(--cream); border: 1.5px solid var(--rust) !important; color: var(--rust);
-      padding: 4px 10px; box-shadow: 2px 2px 0 var(--ink) !important; cursor: pointer;
-      letter-spacing: .04em;
-    }
-    .cite:hover { background: var(--bg-2); }
-    .typing-dots { display: inline-flex; gap: 3px; align-items: center; height: 14px; }
-    .typing-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: tdot 1.2s infinite; }
-    .typing-dots span:nth-child(2) { animation-delay: .15s; }
-    .typing-dots span:nth-child(3) { animation-delay: .3s; }
-    @keyframes tdot { 0%,80%,100%{opacity:.3;transform:translateY(0)} 40%{opacity:1;transform:translateY(-3px)} }
-
-    .composer {
-      border: 2px solid var(--ink) !important; box-shadow: 4px 4px 0 var(--ink) !important;
-      background: var(--bg-2); padding: 8px; display: flex; gap: 8px;
-      align-items: flex-end; margin-top: 14px;
-    }
-    .composer textarea {
-      flex: 1; border: 0; outline: none; resize: none; font-size: 14px;
-      padding: 6px 8px; min-height: 24px; max-height: 140px; background: transparent;
-      color: inherit; font-family: inherit;
-    }
-    .mock-banner {
-      background: var(--cream); border: 1.5px dashed var(--ink);
-      padding: 8px 14px; margin-bottom: 14px;
-      font-family: var(--font-mono); font-size: 11px; color: var(--ink);
-      display: flex; align-items: center; gap: 8px;
-    }
-  `],
-  template: `
-    <div style="margin-bottom:18px">
-      <span class="px-stamp rust">MOCK · PHASE 3</span>
-      <h1 style="margin-top:8px;font-size:28px">對話</h1>
-      <p style="color:var(--muted);font-size:13px;margin:0">詢問知識庫中的文件內容（Chat API Phase 3 後接通，現為模擬回應）</p>
-    </div>
-
-    <div class="mock-banner">
-      <span class="pill rust">MOCK</span>
-      目前為模擬模式，回應來自靜態資料。Phase 3 接通 <code>/chat/completions</code> 後即為真實 RAG 回答。
-    </div>
-
-    <div class="chat-wrap">
-      <div class="messages" #msgBox>
-        @for (msg of messages(); track msg.id) {
-          <div class="msg" [class.me]="msg.role==='user'" [class.bot]="msg.role==='bot'">
-            <div class="av">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
-            <div>
-              <div class="bubble">
-                @if (msg.typing) {
-                  <div class="typing-dots">
-                    <span></span><span></span><span></span>
-                  </div>
-                } @else {
-                  {{ msg.text }}
-                }
-              </div>
-              @if (msg.citations?.length) {
-                <div class="citations">
-                  @for (c of msg.citations; track c) {
-                    <button class="cite">§ {{ c }}</button>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
-
-      <div class="composer">
-        <textarea [(ngModel)]="inputText" rows="1" placeholder="詢問知識庫… (Enter 送出)"
-                  (keydown.enter)="onEnter($event)">
-        </textarea>
-        <button class="btn primary sm" (click)="send()" [disabled]="!inputText.trim() || botTyping()">
-          送出 ▸
-        </button>
-      </div>
-    </div>
-  `,
+  templateUrl: './chat.component.html',
+  styleUrl: './chat.component.scss',
 })
 export class ChatComponent implements AfterViewChecked {
   @ViewChild('msgBox') msgBox!: ElementRef<HTMLDivElement>;
