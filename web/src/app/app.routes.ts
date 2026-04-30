@@ -47,7 +47,7 @@ export const routes: Routes = [
           import('./features/chat/chat.component').then(m => m.ChatComponent),
       },
       {
-        path: 'admin',
+        path: 'admin/sessions',
         canMatch: [adminGuard],
         loadComponent: () =>
           import('./features/admin/sessions/sessions.component').then(m => m.AdminSessionsComponent),

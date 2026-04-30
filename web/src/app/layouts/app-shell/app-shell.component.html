@@ -2,14 +2,13 @@
   <button class="tb-brand" routerLink="/hub">
     <div class="brand-dot small"></div>
     <span class="px-mono">PUBLIC_LLM</span>
-    <span class="px-tag-small">v4.0</span>
   </button>
 
   @if (isSuperAdmin()) {
     <div class="tb-company-picker">
-      <span class="px-label">// TENANT</span>
+      <span class="px-label">TENANT</span>
       <select class="co-select"
-        [ngModel]="ctx.activeCompanyId()"
+        [ngModel]="ctx.activeCompanyId() ?? '' "
         (ngModelChange)="onCompanyChange($event)">
         <option value="">— 全局視角 —</option>
         @for (c of ctx.companies(); track c.company_id) {
@@ -19,8 +18,8 @@
     </div>
   } @else {
     <div class="tb-tenant">
-      <span class="px-label">// TENANT</span>
-      <span class="px-mono" style="font-size:12px">{{ companyId() }}</span>
+      <span class="px-label">TENANT</span>
+      <span class="px-mono" style="font-size:12px">{{ companyName() }}</span>
     </div>
   }
 
@@ -38,7 +37,7 @@
       </span>
     </a>
     @if (isAdmin()) {
-      <a class="px-tab" routerLink="/admin" routerLinkActive="active">
+      <a class="px-tab" routerLink="/admin/sessions" routerLinkActive="active">
         <span class="px-tab-text">
           <span class="px-section-num small">03</span>
           <span>Sessions</span>

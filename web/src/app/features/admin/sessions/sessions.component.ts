@@ -18,12 +18,12 @@ import { TruncateIdPipe } from '../../../shared/pipes/truncate-id.pipe';
   styleUrl: './sessions.component.scss',
 })
 export class AdminSessionsComponent implements OnInit {
-  private readonly http  = inject(HttpClient);
+  private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
 
-  readonly sessions     = signal<SessionStatusResponse[]>([]);
-  readonly loading      = signal(false);
-  readonly apiError     = signal<string | null>(null);
+  readonly sessions = signal<SessionStatusResponse[]>([]);
+  readonly loading = signal(false);
+  readonly apiError = signal<string | null>(null);
   readonly pendingCount = computed(() => this.sessions().filter(s => s.status === 'pending_preview').length);
 
   ngOnInit(): void { this.load(); }
@@ -37,9 +37,11 @@ export class AdminSessionsComponent implements OnInit {
       );
       this.sessions.set(Array.isArray(res) ? res : []);
     } catch (e: any) {
-      const detail = e?.error?.detail ?? e?.message ?? '無法載入';
-      this.apiError.set(detail);
+      // 404 = 後端 list endpoint 尚未實作，顯示空列表即可
       this.sessions.set([]);
+      if (e?.status !== 404) {
+        this.apiError.set(e?.error?.detail ?? '無法載入');
+      }
     } finally {
       this.loading.set(false);
     }

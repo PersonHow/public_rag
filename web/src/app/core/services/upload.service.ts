@@ -2,10 +2,14 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { UploadJob, UploadResponse } from '../../shared/models';
+import { AuthService } from '../services/auth.service';
+import { CompanyContextService } from '../services/company-context.service';
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {
+  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
+  private readonly context = inject(CompanyContextService);
   readonly queue = signal<UploadJob[]>([]);
 
   upload(file: File): void {

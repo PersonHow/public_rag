@@ -5,11 +5,10 @@ GET  /sessions/{session_id}         — 查詢 session 狀態（Mirror View poll
 GET  /sessions/{session_id}/chunks  — 取 session 所有 chunks（Mirror View 預覽）
 POST /sessions/{session_id}/confirm — 管理員確認（Phase 4：確認後自動派送 ingest-chunks）
 POST /sessions/{session_id}/reject  — 管理員拒絕
+GET  /sessions                      - 管理員查看所有 session 
 
-Phase 4 變更：
-  confirm_session 確認後，呼叫 enqueue_ingest_chunks() 派送向量化任務。
-  若 Cloud Tasks 派送失敗，記錄 warning 但不影響 confirm 回應（可手動補打 ingest-chunks）。
-  _chunk_to_dict 新增 face 欄位。
+Phase 5 變更：
+  新增管理員查看 session 列表
 """
 import uuid
 from typing import Any
@@ -186,6 +185,31 @@ async def reject_session(
         message="Session 已拒絕，請重新上傳",
     )
 
+
+@router.get("", response_model=list[SessionStatusResponse])
+async def list_sessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles("superadmin", "company_admin")),
+) -> list[SessionStatusResponse]:
+    """
+    Phase 5 變更：管理員查看所有 session 列表。
+    - company_admin → 只能看自家公司
+    - superadmin    → 看所有公司（可搭配 ?company_id= query param）
+    """
+    query = select(IngestionSession)
+    if current_user.role != "superadmin":
+        query = query.where(IngestionSession.company_id == current_user.company_id)
+    result = await db.execute(query.order_by(IngestionSession.created_at.desc()).limit(100))
+    sessions = result.scalars().all()
+    return [
+        SessionStatusResponse(
+            session_id=s.session_id,
+            status=s.status,
+            fail_reason=s.fail_reason,
+            preview_confirmed=s.preview_confirmed,
+        )
+        for s in sessions
+    ]
 
 def _chunk_to_dict(chunk: Chunk) -> dict[str, Any]:
     return {

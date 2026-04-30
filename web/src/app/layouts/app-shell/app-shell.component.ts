@@ -1,5 +1,5 @@
 import { Component, inject, computed, OnInit } from '@angular/core';
-import { RouterOutlet, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyContextService } from '../../core/services/company-context.service';
@@ -12,8 +12,7 @@ import { CompanyContextService } from '../../core/services/company-context.servi
   styleUrl: './app-shell.component.scss',
 })
 export class AppShellComponent implements OnInit {
-  private readonly auth   = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
   readonly ctx            = inject(CompanyContextService);
 
   readonly isAdmin      = this.auth.isAdmin;
@@ -21,7 +20,10 @@ export class AppShellComponent implements OnInit {
   readonly email        = computed(() => this.auth.currentUser()?.email ?? '—');
   readonly role         = computed(() => this.auth.currentUser()?.role ?? '');
   readonly companyId    = computed(() => this.auth.currentUser()?.company_id ?? '—');
+  readonly companyName  = computed(() => this.auth.currentUser()?.company_name ?? this.auth.currentUser()?.company_id ?? '—');
   readonly avatarChar   = computed(() => (this.auth.currentUser()?.email?.[0] ?? '?').toUpperCase());
+  
+  
 
   async ngOnInit(): Promise<void> {
     if (this.isSuperAdmin()) {

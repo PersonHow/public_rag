@@ -1,4 +1,6 @@
-:host { display: contents; }
+:host {
+  display: contents;
+}
 
 .page-head {
   display: flex;
@@ -8,11 +10,15 @@
   flex-wrap: wrap;
   gap: 12px;
 
-  h1 { margin-top: 8px; font-size: 28px; font-weight: 700; }
+  h1 {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
 }
 
 .page-desc {
-  color: var(--muted);
+  color: var(--rust);
   font-size: 13px;
   margin: 0;
 }

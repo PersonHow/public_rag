@@ -13,6 +13,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     company_id: Optional[str] = None
+    company_name: Optional[str] = None
 
 
 class CurrentUser(BaseModel):

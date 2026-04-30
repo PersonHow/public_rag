@@ -14,7 +14,8 @@ import logging
 import time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,16 +86,26 @@ async def query_knowledge(
     req: QueryRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    company_id: Optional[str] = Query(default=None),  # superadmin 專用
 ) -> QueryResponse:
+
     t_start = time.monotonic()
-    company_id = str(current_user.company_id)
+
+    # superadmin 必須帶 company_id query param
+    if current_user.role == "superadmin":
+        if not company_id:
+            raise HTTPException(status_code=400, detail="superadmin 查詢需指定 company_id")
+        effective_company_id = company_id
+    else:
+        effective_company_id = str(current_user.company_id)
+
 
     logger.info(
         f"查詢開始 question_length={len(req.question)} top_k={req.top_k}",
         extra={
             "phase": "phase5",
             "service": "query",
-            "company_id": company_id,
+            "company_id": effective_company_id,
             "session_id": None,
         },
     )
@@ -106,7 +117,7 @@ async def query_knowledge(
     # ── 2. Qdrant 語意搜尋（強制 company_id filter）────────────────────────
     results = search(
         query_vector=query_vector,
-        company_id=company_id,
+        company_id=effective_company_id,
         top_k=req.top_k,
     )
 
@@ -117,7 +128,7 @@ async def query_knowledge(
             extra={
                 "phase": "phase5",
                 "service": "query",
-                "company_id": company_id,
+                "company_id": effective_company_id,
                 "session_id": None,
             },
         )
@@ -172,7 +183,7 @@ async def query_knowledge(
                     extra={
                         "phase": "phase5",
                         "service": "query",
-                        "company_id": company_id,
+                        "company_id": effective_company_id,
                         "session_id": None,
                     },
                 )
@@ -194,7 +205,7 @@ async def query_knowledge(
             extra={
                 "phase": "phase5",
                 "service": "query",
-                "company_id": company_id,
+                "company_id": effective_company_id,
                 "session_id": None,
             },
         )
@@ -204,7 +215,7 @@ async def query_knowledge(
             extra={
                 "phase": "phase5",
                 "service": "query",
-                "company_id": company_id,
+                "company_id": effective_company_id,
                 "session_id": None,
             },
         )

@@ -34,6 +34,7 @@ export class AuthService {
       email,
       role: res.role as CurrentUser['role'],
       company_id: res.company_id,
+      company_name: res.company_name,
     };
     this._token.set(res.access_token);
     this._user.set(user);

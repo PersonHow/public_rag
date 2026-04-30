@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.models.user import User
+from app.models.company import Company
 from app.schemas.auth import TokenResponse, CurrentUser
 
 settings = get_settings()
@@ -63,9 +64,18 @@ async def login(db: AsyncSession, email: str, password: str) -> Optional[TokenRe
         return None
     if not user.is_active:
         raise PermissionError("account_inactive")
+
+    company_name: Optional[str] = None
+    if user.company_id:
+        result = await db.execute(select(Company).where(Company.company_id == user.company_id))
+        company = result.scalar_one_or_none()
+        if company:
+            company_name = company.name
+
     token = create_access_token(user)
     return TokenResponse(
         access_token=token,
         role=user.role,
         company_id=str(user.company_id) if user.company_id else None,
+        company_name=company_name,
     )

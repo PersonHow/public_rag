@@ -37,6 +37,7 @@ import httpx
 from openai import AsyncOpenAI
 from pydantic import ValidationError
 
+
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.schemas.chunk import GeminiChunkOutput, GeminiChunkValidationError
@@ -532,6 +533,7 @@ async def generate_answer(
         ],
         temperature=0.2,      # 回答比 ETL 轉換稍高一點，語氣更自然
         max_tokens=2048,
+        
     )
  
     return (response.choices[0].message.content or "").strip()
