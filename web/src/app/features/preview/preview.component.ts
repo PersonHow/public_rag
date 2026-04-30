@@ -2,10 +2,10 @@ import { Component, inject, signal, Input, OnInit, OnDestroy, computed } from '@
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { PreviewService } from './services/preview.service';
-import { AuthService } from '../../core/auth/auth.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { Chunk } from '../../core/models';
+import { PreviewService } from '../../core/services/preview.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import { Chunk } from '../../shared/models';
 import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
 import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';

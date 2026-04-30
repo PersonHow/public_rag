@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
-import { UploadJob, UploadResponse } from '../../../core/models';
+import { environment } from '../../../environments/environment';
+import { UploadJob, UploadResponse } from '../../shared/models';
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {

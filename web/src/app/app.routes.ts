@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
-import { adminGuard } from './core/auth/role.guard';
+import { adminGuard, superadminGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'hub' },
@@ -57,6 +57,12 @@ export const routes: Routes = [
         canMatch: [adminGuard],
         loadComponent: () =>
           import('./features/admin/users/users.component').then(m => m.AdminUsersComponent),
+      },
+      {
+        path: 'admin/companies',
+        canMatch: [superadminGuard],
+        loadComponent: () =>
+          import('./features/admin/companies/companies.component').then(m => m.AdminCompaniesComponent),
       },
     ],
   },

@@ -5,10 +5,24 @@
     <span class="px-tag-small">v4.0</span>
   </button>
 
-  <div class="tb-tenant">
-    <span class="px-label">// TENANT</span>
-    <span class="px-mono" style="font-size:12px">{{ companyId() }}</span>
-  </div>
+  @if (isSuperAdmin()) {
+    <div class="tb-company-picker">
+      <span class="px-label">// TENANT</span>
+      <select class="co-select"
+        [ngModel]="ctx.activeCompanyId()"
+        (ngModelChange)="onCompanyChange($event)">
+        <option value="">— 全局視角 —</option>
+        @for (c of ctx.companies(); track c.company_id) {
+          <option [value]="c.company_id">{{ c.name }}</option>
+        }
+      </select>
+    </div>
+  } @else {
+    <div class="tb-tenant">
+      <span class="px-label">// TENANT</span>
+      <span class="px-mono" style="font-size:12px">{{ companyId() }}</span>
+    </div>
+  }
 
   <nav class="tb-nav">
     <a class="px-tab" routerLink="/upload" routerLinkActive="active">
@@ -34,6 +48,14 @@
         <span class="px-tab-text">
           <span class="px-section-num small">04</span>
           <span>使用者</span>
+        </span>
+      </a>
+    }
+    @if (isSuperAdmin()) {
+      <a class="px-tab" routerLink="/admin/companies" routerLinkActive="active">
+        <span class="px-tab-text">
+          <span class="px-section-num small">05</span>
+          <span>租戶</span>
         </span>
       </a>
     }

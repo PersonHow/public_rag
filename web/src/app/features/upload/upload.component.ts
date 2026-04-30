@@ -1,9 +1,9 @@
 import { Component, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { UploadService } from './services/upload.service';
-import { UploadJob } from '../../core/models';
-import { AuthService } from '../../core/auth/auth.service';
-import { ToastService } from '../../core/notifications/toast.service';
+import { UploadService } from '../../core/services/upload.service';
+import { UploadJob } from '../../shared/models';
+import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
 import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
 

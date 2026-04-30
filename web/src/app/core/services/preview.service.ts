@@ -1,11 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, interval, switchMap, takeWhile } from 'rxjs';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../environments/environment';
 import {
   SessionStatusResponse, SessionChunksResponse,
   Document, Chunk, ConfirmResponse
-} from '../../../core/models';
+} from '../../shared/models';
 
 @Injectable({ providedIn: 'root' })
 export class PreviewService {
@@ -17,9 +17,9 @@ export class PreviewService {
   readonly loading   = signal(false);
   readonly error     = signal<string | null>(null);
 
-  readonly selectedDocId     = signal<string | null>(null);
-  readonly filter            = signal('');
-  readonly groupBy           = signal<'case_id' | 'product_id'>('product_id');
+  readonly selectedDocId = signal<string | null>(null);
+  readonly filter        = signal('');
+  readonly groupBy       = signal<'case_id' | 'product_id'>('product_id');
 
   readonly lowConfidenceCount = computed(() =>
     this.documents().filter(d => d.has_low_confidence).length

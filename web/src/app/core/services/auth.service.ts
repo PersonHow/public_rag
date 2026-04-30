@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, TokenResponse, CurrentUser } from '../models';
+import { LoginRequest, TokenResponse, CurrentUser } from '../../shared/models';
 
 const TOKEN_KEY = 'plm_token';
 const USER_KEY  = 'plm_user';

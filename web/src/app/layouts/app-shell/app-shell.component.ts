@@ -1,23 +1,37 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, OnInit } from '@angular/core';
 import { RouterOutlet, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService } from '../../core/auth/auth.service';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/services/auth.service';
+import { CompanyContextService } from '../../core/services/company-context.service';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnInit {
   private readonly auth   = inject(AuthService);
   private readonly router = inject(Router);
+  readonly ctx            = inject(CompanyContextService);
 
-  readonly isAdmin    = this.auth.isAdmin;
-  readonly email      = computed(() => this.auth.currentUser()?.email ?? '—');
-  readonly role       = computed(() => this.auth.currentUser()?.role ?? '');
-  readonly companyId  = computed(() => this.auth.currentUser()?.company_id ?? '—');
-  readonly avatarChar = computed(() => (this.auth.currentUser()?.email?.[0] ?? '?').toUpperCase());
+  readonly isAdmin      = this.auth.isAdmin;
+  readonly isSuperAdmin = this.auth.isSuperAdmin;
+  readonly email        = computed(() => this.auth.currentUser()?.email ?? '—');
+  readonly role         = computed(() => this.auth.currentUser()?.role ?? '');
+  readonly companyId    = computed(() => this.auth.currentUser()?.company_id ?? '—');
+  readonly avatarChar   = computed(() => (this.auth.currentUser()?.email?.[0] ?? '?').toUpperCase());
+
+  async ngOnInit(): Promise<void> {
+    if (this.isSuperAdmin()) {
+      await this.ctx.loadCompanies();
+    }
+  }
+
+  onCompanyChange(value: string): void {
+    this.ctx.select(value || null);
+  }
 
   logout(): void { this.auth.logout(); }
 }

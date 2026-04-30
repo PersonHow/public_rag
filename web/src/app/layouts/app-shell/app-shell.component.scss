@@ -37,6 +37,24 @@
 
 .px-tab-text { display: flex; flex-direction: column; gap: 0; line-height: 1.1; }
 
+.tb-company-picker {
+  display: flex; align-items: center; gap: 8px;
+  border-right: 1px solid var(--ink); padding-right: 18px;
+}
+
+.co-select {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--ink); background: var(--bg-2);
+  border: 1.5px solid var(--ink); padding: 4px 28px 4px 8px;
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer; max-width: 200px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23283d3b'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+
+  &:focus { outline: 2px solid var(--rust); outline-offset: 1px; }
+}
+
 .tb-spacer { flex: 1; }
 
 .px-icon-btn {
