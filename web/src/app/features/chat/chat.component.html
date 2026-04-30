@@ -1,13 +1,4 @@
-<div class="page-head">
-  <span class="px-stamp rust">MOCK · PHASE 3</span>
-  <h1>對話</h1>
-  <p style="color:var(--muted);font-size:13px;margin:0">詢問知識庫中的文件內容（Chat API Phase 3 後接通，現為模擬回應）</p>
-</div>
-
-<div class="mock-banner">
-  <span class="pill rust">MOCK</span>
-  目前為模擬模式，回應來自靜態資料。Phase 3 接通 <code>/chat/completions</code> 後即為真實 RAG 回答。
-</div>
+<app-page-head title="對話" desc="詢問知識庫中的加工參數、品質標準與工序規範" />
 
 <div class="chat-wrap">
   <div class="messages" #msgBox>
@@ -24,10 +15,16 @@
               {{ msg.text }}
             }
           </div>
-          @if (msg.citations?.length) {
+          @if (msg.sources?.length) {
             <div class="citations">
-              @for (c of msg.citations; track c) {
-                <button class="cite">§ {{ c }}</button>
+              @for (s of msg.sources; track s.doc_filename + s.chunk_context) {
+                @if (s.code_download_url) {
+                  <a class="cite" [href]="s.code_download_url" target="_blank" rel="noopener">
+                    § {{ s.chunk_context || s.doc_filename }} ↓
+                  </a>
+                } @else {
+                  <span class="cite">§ {{ s.chunk_context || s.doc_filename }}</span>
+                }
               }
             </div>
           }

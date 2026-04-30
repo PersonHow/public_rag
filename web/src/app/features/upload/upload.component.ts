@@ -4,12 +4,13 @@ import { UploadService } from './services/upload.service';
 import { UploadJob } from '../../core/models';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/notifications/toast.service';
-import { StepperComponent } from '../../components/stepper/stepper.component';
+import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
+import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [RouterLink, StepperComponent],
+  imports: [RouterLink, StepperComponent, PageHeadComponent],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.scss',
 })

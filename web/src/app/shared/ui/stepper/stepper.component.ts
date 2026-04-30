@@ -1,11 +1,10 @@
 import { Component, input, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-stepper',
   standalone: true,
-  imports: [RouterLink, NgClass],
+  imports: [RouterLink],
   templateUrl: './stepper.component.html',
   styleUrl: './stepper.component.scss',
 })

@@ -1,19 +1,16 @@
 <app-stepper [activeStep]="1" />
 
-<!-- Page head -->
-<div class="page-head">
-  <div>
-    <span class="px-stamp rust">STEP 01 / 03 · INGEST</span>
-    <h1>上傳資料</h1>
-    <p style="color:var(--muted);font-size:13.5px;margin:0">把 PDF、Word、CAD 工檔交給模型解析。處理完成後會出現可確認的預覽。</p>
-  </div>
-  <div class="row">
+<app-page-head
+  stamp="STEP 01 / 03 · INGEST" stampColor="rust"
+  title="上傳資料"
+  desc="把 PDF、Word、CAD 工檔交給模型解析。處理完成後會出現可確認的預覽。">
+  <div actions class="row">
     <button class="btn primary" (click)="fileInput.click()">↑ 選擇檔案</button>
     <input #fileInput type="file" multiple style="display:none"
            accept=".pdf,.docx,.tap,.nc,.dxf"
            (change)="onFileChange($event)" />
   </div>
-</div>
+</app-page-head>
 
 <!-- Stats -->
 <div class="stat-row">

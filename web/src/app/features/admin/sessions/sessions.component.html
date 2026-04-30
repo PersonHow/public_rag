@@ -1,21 +1,12 @@
-<div class="page-head">
-  <div>
-    <span class="px-stamp">ADMIN · SESSIONS</span>
-    <h1>Session 管理</h1>
-    <p style="color:var(--muted);font-size:13px;margin:0">所有上傳 Session 與狀態（需要管理員角色）</p>
-  </div>
-  <button class="btn" (click)="load()">↺ 重新整理</button>
-</div>
+<app-page-head
+  stamp="ADMIN · SESSIONS"
+  title="Session 管理"
+  desc="所有上傳 Session 與狀態（需要管理員角色）">
+  <button actions class="btn" (click)="load()">↺ 重新整理</button>
+</app-page-head>
 
-@if (loading()) {
-  <div class="empty-state">⏳ 載入中…</div>
-}
-
-@if (!loading() && sessions().length === 0) {
-  <div class="empty-state">
-    <div style="font-size:32px;margin-bottom:12px">□</div>
-    目前沒有任何 Session 記錄
-  </div>
+@if (loading() || (!loading() && sessions().length === 0 && !apiError())) {
+  <app-empty-state [loading]="loading()" message="目前沒有任何 Session 記錄" />
 }
 
 @if (!loading() && sessions().length > 0) {
@@ -33,14 +24,9 @@
       <tbody>
         @for (s of sessions(); track s.session_id) {
           <tr>
-            <td class="session-id">{{ s.session_id.slice(0,8) }}…</td>
+            <td class="session-id">{{ s.session_id | truncateId }}</td>
             <td>
-              <span class="pill"
-                    [class.teal]="s.status==='pending_preview'"
-                    [class.ink]="s.status==='confirmed'"
-                    [class.rust]="s.status==='failed'">
-                {{ s.status }}
-              </span>
+              <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
             </td>
             <td>{{ s.preview_confirmed ? '✓' : '—' }}</td>
             <td style="color:var(--rust);font-size:12px">{{ s.fail_reason ?? '—' }}</td>
@@ -54,7 +40,6 @@
       </tbody>
     </table>
   </div>
-
   <div class="table-foot">
     共 {{ sessions().length }} 筆 · pending_preview: {{ pendingCount() }} 筆
   </div>

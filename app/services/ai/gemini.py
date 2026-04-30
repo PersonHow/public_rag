@@ -506,5 +506,36 @@ async def _convert_segment(
     )
 
 
+"""
+generate_answer()：RAG 查詢專用，純文字生成，不做 chunk 解析。
+與 convert_to_chunks / convert_pdf_to_chunks 完全獨立。
+"""
+async def generate_answer(
+    system_prompt: str,
+    user_prompt: str,
+) -> str:
+    """
+    Phase 5 RAG 查詢專用：呼叫 Gemini Flash 生成條列式回答。
+    走 OpenAI-compat endpoint（DOCX 路徑相同的 client）。
+    純文字生成，不做 JSON 解析。
+    失敗時直接拋出例外（由 query router 的 FastAPI error handler 處理）。
+    """
+    token_mgr = TokenManager.get_instance()
+    token = await token_mgr.get_token()
+    client = _build_vertex_client(token)
+ 
+    response = await client.chat.completions.create(
+        model=settings.GEMINI_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.2,      # 回答比 ETL 轉換稍高一點，語氣更自然
+        max_tokens=2048,
+    )
+ 
+    return (response.choices[0].message.content or "").strip()
+
+
 class GeminiMaxRetriesError(Exception):
     pass

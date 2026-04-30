@@ -1,24 +1,16 @@
 <app-stepper [activeStep]="2" [step3Done]="isConfirmed()" />
 
-<!-- Page head -->
-<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">
-  <div>
-    <span class="px-stamp rust">STEP 02 / 03 · MIRROR VIEW</span>
-    <h1 style="margin-top:8px;font-size:28px">預覽資料</h1>
-    <p style="color:var(--muted);font-size:13px;margin:0">
-      Session: <span style="font-family:var(--font-mono)">{{ sessionId }}</span>
-    </p>
+<app-page-head stamp="STEP 02 / 03 · MIRROR VIEW" stampColor="rust" title="預覽資料">
+  <p subtitle style="color:var(--muted);font-size:13px;margin:0">
+    Session: <span style="font-family:var(--font-mono)">{{ sessionId }}</span>
+  </p>
+  <div actions class="row">
+    <app-status-badge [label]="statusLabel()" [color]="statusColor()" />
   </div>
-  <div class="row">
-    <span class="pill" [class.teal]="status()==='pending_preview'" [class.rust]="status()==='failed'" [class.ink]="status()==='confirmed'">
-      {{ statusLabel() }}
-    </span>
-  </div>
-</div>
+</app-page-head>
 
-<!-- Loading -->
 @if (svc.loading()) {
-  <div class="empty-state">⏳ 載入中…</div>
+  <app-empty-state [loading]="true" />
 }
 
 @if (svc.error()) {
@@ -87,7 +79,7 @@
       <div class="chunk" [class.low]="isLowConf(chunk)">
         <div class="chunk-head">
           <span class="chunk-name">{{ chunk.product_name || chunk.case_id || '(unnamed)' }}</span>
-          <span class="chunk-id">{{ chunk.chunk_id.slice(0,8) }}</span>
+          <span class="chunk-id">{{ chunk.chunk_id | truncateId }}</span>
           @if (isLowConf(chunk)) {
             <span class="pill rust" style="margin-left:auto">LOW CONF</span>
           }
@@ -132,7 +124,7 @@
     }
 
     @if (svc.filteredChunks().length === 0 && !svc.loading()) {
-      <div class="empty-state">無符合條件的 chunks</div>
+      <app-empty-state message="無符合條件的 chunks" />
     }
   </div>
 

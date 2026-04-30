@@ -1,14 +1,16 @@
-<div class="page-head">
-  <div>
-    <span class="px-stamp">ADMIN · USERS</span>
-    <h1>使用者管理</h1>
-    <p style="color:var(--muted);font-size:13px;margin:0">租戶成員與角色管理（需要 superadmin 或 company_admin）</p>
-  </div>
-  <button class="btn" (click)="load()">↺ 重新整理</button>
-</div>
+<app-page-head
+  stamp="ADMIN · USERS"
+  title="使用者管理"
+  desc="租戶成員與角色管理（需要 superadmin 或 company_admin）">
+  <button actions class="btn" (click)="load()">↺ 重新整理</button>
+</app-page-head>
 
-@if (loading()) {
-  <div class="empty-state">⏳ 載入中…</div>
+@if (loading() || (!loading() && users().length === 0)) {
+  <app-empty-state [loading]="loading()" message="無使用者資料">
+    @if (apiError()) {
+      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
+    }
+  </app-empty-state>
 }
 
 @if (!loading() && users().length > 0) {
@@ -26,19 +28,15 @@
       <tbody>
         @for (u of users(); track u.user_id) {
           <tr>
-            <td class="uid">{{ u.user_id.slice(0,8) }}…</td>
+            <td class="uid">{{ u.user_id | truncateId }}</td>
             <td>{{ u.email }}</td>
             <td>
-              <span class="pill"
-                    [class.rust]="u.role==='superadmin'"
-                    [class.teal]="u.role==='company_admin'">
-                {{ u.role }}
-              </span>
+              <app-status-badge [label]="u.role" [color]="roleColor(u.role)" />
             </td>
             <td>
-              <span class="pill" [class.teal]="u.is_active" [class.rust]="!u.is_active">
-                {{ u.is_active ? '啟用' : '停用' }}
-              </span>
+              <app-status-badge
+                [label]="u.is_active ? '啟用' : '停用'"
+                [color]="u.is_active ? 'teal' : 'rust'" />
             </td>
             <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">
               {{ u.company_id ?? '—' }}
@@ -47,15 +45,5 @@
         }
       </tbody>
     </table>
-  </div>
-}
-
-@if (!loading() && users().length === 0) {
-  <div class="empty-state">
-    <div style="font-size:32px;margin-bottom:12px">□</div>
-    無使用者資料
-    @if (apiError()) {
-      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
-    }
   </div>
 }

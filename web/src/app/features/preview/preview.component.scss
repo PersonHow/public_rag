@@ -117,11 +117,6 @@
   font-family: var(--font-mono); font-size: 12px;
 }
 
-.empty-state {
-  text-align: center; padding: 48px;
-  font-family: var(--font-mono); color: var(--muted);
-}
-
 .api-error {
   padding: 18px; border: 2px solid var(--rust);
   box-shadow: 3px 3px 0 var(--rust); color: var(--rust);

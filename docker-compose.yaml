@@ -10,9 +10,23 @@ services:
     env_file:
       - .env
     volumes:
-    # 將你本機的 gcloud 設定目錄掛載到容器內的 root 目錄
       - ~/.config/gcloud/application_default_credentials.json:/secrets/adc.json:ro
     environment:
       - PORT=8080
-      # 告訴程式去「容器內部」的那個掛載路徑找憑證檔案
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/adc.json
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\" 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      api_center:
+        condition: service_healthy

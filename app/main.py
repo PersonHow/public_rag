@@ -4,9 +4,9 @@ app/main.py
 FastAPI 應用入口。
 所有 router 在此掛載，logging 在 startup 設定。
 
-Phase 4 變更：
-  - version 4.0.0
-  - startup event 初始化 Qdrant collection（冪等）
+Phase 5 變更：
+  - version 5.0.0
+  - 掛載 query router
 """
 import logging
 
@@ -17,6 +17,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.routers import health, sessions, upload
 from app.routers import auth, rules                             # Phase 2 / Phase 3
+from app.routers import query                                   # Phase 5
 from app.routers.internal import tasks
 from app.routers.admin import companies, users, internal_setup  # Phase 2
 
@@ -26,8 +27,8 @@ setup_logging(level=logging.DEBUG if settings.app_env == "development" else logg
 
 app = FastAPI(
     title="多租戶 RAG 生產助理系統",
-    description="Phase 4 — 向量寫入",
-    version="4.0.0",
+    description="Phase 5 — RAG 查詢",
+    version="5.0.0",
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
@@ -77,10 +78,13 @@ app.include_router(internal_setup.router)
 # Phase 3
 app.include_router(rules.router)
 
+# Phase 5
+app.include_router(query.router)
+
 
 @app.get("/")
 async def root() -> dict:
     return {
         "service": "RAG Production Assistant",
-        "phase": "Phase 4 — 向量寫入",
+        "phase": "Phase 5 — RAG 查詢",
     }

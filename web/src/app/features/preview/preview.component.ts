@@ -6,12 +6,16 @@ import { PreviewService } from './services/preview.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { Chunk } from '../../core/models';
-import { StepperComponent } from '../../components/stepper/stepper.component';
+import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
+import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
+import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
+import { TruncateIdPipe } from '../../shared/pipes/truncate-id.pipe';
 
 @Component({
   selector: 'app-preview',
   standalone: true,
-  imports: [RouterLink, FormsModule, StepperComponent],
+  imports: [RouterLink, FormsModule, StepperComponent, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe],
   templateUrl: './preview.component.html',
   styleUrl: './preview.component.scss',
 })
@@ -35,6 +39,14 @@ export class PreviewComponent implements OnInit, OnDestroy {
       processing: '處理中', done: '完成', failed: '已拒絕',
     };
     return m[this.status()] ?? this.status();
+  });
+
+  readonly statusColor = computed((): 'teal' | 'rust' | 'ink' | '' => {
+    const s = this.status();
+    if (s === 'pending_preview' || s === 'done') return 'teal';
+    if (s === 'failed') return 'rust';
+    if (s === 'confirmed' || s === 'processing') return 'ink';
+    return '';
   });
 
   async ngOnInit(): Promise<void> {

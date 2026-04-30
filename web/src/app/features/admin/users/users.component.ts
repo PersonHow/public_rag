@@ -2,6 +2,11 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { PageHeadComponent } from '../../../shared/ui/page-head/page-head.component';
+import { StatusBadgeComponent } from '../../../shared/ui/status-badge/status-badge.component';
+import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
+import { TruncateIdPipe } from '../../../shared/pipes/truncate-id.pipe';
+
 interface UserRow {
   user_id: string;
   email: string;
@@ -13,7 +18,7 @@ interface UserRow {
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [],
+  imports: [PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
 })
@@ -40,5 +45,11 @@ export class AdminUsersComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  roleColor(role: string): 'rust' | 'teal' | '' {
+    if (role === 'superadmin') return 'rust';
+    if (role === 'company_admin') return 'teal';
+    return '';
   }
 }
