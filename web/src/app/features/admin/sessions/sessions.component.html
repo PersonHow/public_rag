@@ -24,7 +24,7 @@
       <tbody>
         @for (s of sessions(); track s.session_id) {
           <tr>
-            <td class="session-id">{{ s.session_id | truncateId }}</td>
+            <td class="session-id" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
             <td>
               <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
             </td>

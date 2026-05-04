@@ -14,7 +14,11 @@ export class HubComponent {
 
   readonly isAdmin = this.auth.isAdmin;
   readonly role    = computed(() => this.auth.currentUser()?.role?.toUpperCase() ?? '');
-  readonly displayName = computed(() => this.auth.currentUser()?.email?.split('@')[0] ?? '訪客');
+  readonly displayName = computed(() =>
+    this.auth.currentUser()?.company_name ??
+    this.auth.currentUser()?.email?.split('@')[0] ??
+    '訪客'
+  );
 
   readonly greet = computed(() => {
     const h = new Date().getHours();
@@ -47,7 +51,7 @@ export class HubComponent {
         {
           key: 'admin', n: '03', title: 'Sessions', sub: '文件處理紀錄',
           desc: '管理所有上傳 Session，審視 pending_preview 文件，執行確認或拒絕。',
-          meta: '待確認 2 份', action: '管理 Sessions', go: '/admin', kind: 'teal',
+          meta: '待確認 2 份', action: '管理 Sessions', go: '/admin/sessions', kind: 'teal',
         },
         {
           key: 'users', n: '04', title: '使用者', sub: '人員 · 角色 · 權限',

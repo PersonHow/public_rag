@@ -48,7 +48,7 @@
 }
 
 // ── Chunk ────────────────────────────────────────────────
-.chunks-list { display: flex; flex-direction: column; gap: 12px; }
+.chunks-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 80px; }
 
 .chunk {
   border: 1.5px solid var(--ink) !important; box-shadow: 3px 3px 0 var(--ink);

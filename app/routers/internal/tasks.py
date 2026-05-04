@@ -584,7 +584,7 @@ async def _save_chunks_to_db(
             doc_id=document.doc_id,
             company_id=company_id_uuid,
             rule_version=rule_version,
-            doc_type=chunk_output.doc_type,
+            doc_type=document.doc_type,
             embed_text=chunk_output.embed_text,
             product_name=chunk_output.product_name,
             product_id=chunk_output.product_id,
