@@ -1,6 +1,6 @@
 <app-stepper [activeStep]="2" [step3Done]="isConfirmed()" />
 
-<app-page-head   title="預覽資料">
+<app-page-head title="預覽資料">
   <p subtitle style="color:var(--muted);font-size:13px;margin:0">
     Session: <span style="font-family:var(--font-mono)">{{ sessionId }}</span>
   </p>
@@ -32,113 +32,123 @@
     </div>
   }
 
+  <!-- Worker 還在跑：顯示等待提示 -->
+  @if (isWorkerRunning()) {
+    <div class="status-bar processing">
+      <span class="spinner"></span>
+      模型解析中，通常需要 10～30 秒，請稍候…
+    </div>
+  }
+
   @if (svc.lowConfidenceCount() > 0) {
     <div class="low-conf-alert">
       ⚠ <strong>{{ svc.lowConfidenceCount() }} 份文件</strong> 含低信心欄位，請在確認前審視標示為 <span class="pill rust">LOW</span> 的 chunks。
     </div>
   }
 
-  <!-- Doc picker -->
-  <div class="mv-doc-picker">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span class="px-label" style="margin:0">// FILES</span>
-      <span class="px-mono" style="font-size:11px;color:var(--muted)">{{ svc.documents().length }} 份 · {{ svc.chunks().length }} chunks</span>
-    </div>
-    <div class="doc-list-h">
-      <button class="doc-item" [class.active]="svc.selectedDocId() === null"
-              (click)="svc.selectedDocId.set(null)">
-        <div class="nm">全部文件</div>
-        <div class="det">{{ svc.chunks().length }} chunks</div>
-      </button>
-      @for (doc of svc.documents(); track doc.doc_id) {
-        <button class="doc-item" [class.active]="svc.selectedDocId() === doc.doc_id"
-                (click)="svc.selectedDocId.set(doc.doc_id)">
-          <div class="nm">
-            @if (doc.has_low_confidence) { <span class="flag-dot"></span> }
-            {{ doc.filename }}
-          </div>
-          <div class="det">{{ doc.doc_type.toUpperCase() }}</div>
+  <!-- Doc picker：只在 chunks 有資料時顯示 -->
+  @if (svc.chunks().length > 0) {
+    <div class="mv-doc-picker">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="px-label" style="margin:0">// FILES</span>
+        <span class="px-mono" style="font-size:11px;color:var(--muted)">{{ svc.documents().length }} 份 · {{ svc.chunks().length }} chunks</span>
+      </div>
+      <div class="doc-list-h">
+        <button class="doc-item" [class.active]="svc.selectedDocId() === null"
+                (click)="svc.selectedDocId.set(null)">
+          <div class="nm">全部文件</div>
+          <div class="det">{{ svc.chunks().length }} chunks</div>
         </button>
+        @for (doc of svc.documents(); track doc.doc_id) {
+          <button class="doc-item" [class.active]="svc.selectedDocId() === doc.doc_id"
+                  (click)="svc.selectedDocId.set(doc.doc_id)">
+            <div class="nm">
+              @if (doc.has_low_confidence) { <span class="flag-dot"></span> }
+              {{ doc.filename }}
+            </div>
+            <div class="det">{{ doc.doc_type.toUpperCase() }}</div>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <span class="px-label" style="margin:0">// SEARCH</span>
+      <input class="filter-input" type="text" placeholder="搜尋 chunk…"
+             [value]="svc.filter()" (input)="svc.filter.set($any($event.target).value)" />
+      <span class="px-mono" style="font-size:11px;color:var(--muted);margin-left:auto">
+        {{ svc.filteredChunks().length }} / {{ svc.chunks().length }} chunks
+      </span>
+    </div>
+
+    <!-- Chunks -->
+    <div class="chunks-list">
+      @for (chunk of svc.filteredChunks(); track chunk.chunk_id) {
+        <div class="chunk" [class.low]="isLowConf(chunk)">
+          <div class="chunk-head">
+            <span class="chunk-name">{{ chunk.product_name || chunk.case_id || '(unnamed)' }}</span>
+            <span class="chunk-id">{{ chunk.chunk_id | truncateId }}</span>
+            @if (isLowConf(chunk)) {
+              <span class="pill rust" style="margin-left:auto">LOW CONF</span>
+            }
+            <span class="px-mono" style="font-size:10px;color:var(--muted);margin-left:auto">{{ chunk.doc_type }}</span>
+          </div>
+          <div class="chunk-body">
+            <div class="specs">
+              @if (chunk.product_name) {
+                <div class="spec"><span class="l">Product</span><span class="v">{{ chunk.product_name }}</span></div>
+              }
+              @if (chunk.material) {
+                <div class="spec"><span class="l">材料</span><span class="v">{{ chunk.material }}</span></div>
+              }
+              @if (chunk.dimensions) {
+                <div class="spec"><span class="l">尺寸</span><span class="v">{{ chunk.dimensions }}</span></div>
+              }
+              @if (chunk.face) {
+                <div class="spec"><span class="l">Face</span><span class="v">{{ chunk.face }}</span></div>
+              }
+              @if (chunk.situation) {
+                <div class="spec"><span class="l">狀況</span><span class="v">{{ chunk.situation }}</span></div>
+              }
+              @if (chunk.action) {
+                <div class="spec"><span class="l">動作</span><span class="v">{{ chunk.action }}</span></div>
+              }
+              @if (chunk.reason) {
+                <div class="spec"><span class="l">原因</span><span class="v">{{ chunk.reason }}</span></div>
+              }
+              @if (chunk.applies_to) {
+                <div class="spec"><span class="l">適用範圍</span><span class="v">{{ chunk.applies_to }}</span></div>
+              }
+              @if (!hasAnyField(chunk)) {
+                <div class="spec"><span class="v empty">（無抽取欄位）</span></div>
+              }
+            </div>
+            <div class="embed-text">
+              <span class="lab">embed_text</span>
+              {{ chunk.embed_text }}
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (svc.filteredChunks().length === 0 && !svc.loading()) {
+        <app-empty-state message="無符合條件的 chunks" />
       }
     </div>
-  </div>
 
-  <!-- Filter bar -->
-  <div class="filter-bar">
-    <span class="px-label" style="margin:0">// SEARCH</span>
-    <input class="filter-input" type="text" placeholder="搜尋 chunk…"
-           [value]="svc.filter()" (input)="svc.filter.set($any($event.target).value)" />
-    <span class="px-mono" style="font-size:11px;color:var(--muted);margin-left:auto">
-      {{ svc.filteredChunks().length }} / {{ svc.chunks().length }} chunks
-    </span>
-  </div>
-
-  <!-- Chunks -->
-  <div class="chunks-list">
-    @for (chunk of svc.filteredChunks(); track chunk.chunk_id) {
-      <div class="chunk" [class.low]="isLowConf(chunk)">
-        <div class="chunk-head">
-          <span class="chunk-name">{{ chunk.product_name || chunk.case_id || '(unnamed)' }}</span>
-          <span class="chunk-id">{{ chunk.chunk_id | truncateId }}</span>
-          @if (isLowConf(chunk)) {
-            <span class="pill rust" style="margin-left:auto">LOW CONF</span>
-          }
-          <span class="px-mono" style="font-size:10px;color:var(--muted);margin-left:auto">{{ chunk.doc_type }}</span>
+    <!-- Confirm bar -->
+    @if (svc.canConfirm() && isAdmin()) {
+      <div class="confirm-bar">
+        <div class="info">
+          <span class="px-stamp">審視完畢？</span>
+          <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
         </div>
-        <div class="chunk-body">
-          <div class="specs">
-            @if (chunk.product_name) {
-              <div class="spec"><span class="l">Product</span><span class="v">{{ chunk.product_name }}</span></div>
-            }
-            @if (chunk.material) {
-              <div class="spec"><span class="l">材料</span><span class="v">{{ chunk.material }}</span></div>
-            }
-            @if (chunk.dimensions) {
-              <div class="spec"><span class="l">尺寸</span><span class="v">{{ chunk.dimensions }}</span></div>
-            }
-            @if (chunk.face) {
-              <div class="spec"><span class="l">Face</span><span class="v">{{ chunk.face }}</span></div>
-            }
-            @if (chunk.situation) {
-              <div class="spec"><span class="l">狀況</span><span class="v">{{ chunk.situation }}</span></div>
-            }
-            @if (chunk.action) {
-              <div class="spec"><span class="l">動作</span><span class="v">{{ chunk.action }}</span></div>
-            }
-            @if (chunk.reason) {
-              <div class="spec"><span class="l">原因</span><span class="v">{{ chunk.reason }}</span></div>
-            }
-            @if (chunk.applies_to) {
-              <div class="spec"><span class="l">適用範圍</span><span class="v">{{ chunk.applies_to }}</span></div>
-            }
-            @if (!hasAnyField(chunk)) {
-              <div class="spec"><span class="v empty">（無抽取欄位）</span></div>
-            }
-          </div>
-          <div class="embed-text">
-            <span class="lab">embed_text</span>
-            {{ chunk.embed_text }}
-          </div>
-        </div>
+        <button class="btn ghost sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</button>
+        <button class="btn rust" [disabled]="actionLoading()" (click)="onConfirm()">
+          {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
+        </button>
       </div>
     }
-
-    @if (svc.filteredChunks().length === 0 && !svc.loading()) {
-      <app-empty-state message="無符合條件的 chunks" />
-    }
-  </div>
-
-  <!-- Confirm bar -->
-  @if (svc.canConfirm() && isAdmin()) {
-    <div class="confirm-bar">
-      <div class="info">
-        <span class="px-stamp">審視完畢？</span>
-        <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
-      </div>
-      <button class="btn ghost sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</button>
-      <button class="btn rust" [disabled]="actionLoading()" (click)="onConfirm()">
-        {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
-      </button>
-    </div>
   }
 }

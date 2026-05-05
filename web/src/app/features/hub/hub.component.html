@@ -12,16 +12,22 @@
   </div>
   <div class="hub-stats">
     <div class="hub-stat">
-      <div class="px-bignum rust">2</div>
+      <div class="px-bignum rust">
+        {{ statsLoading() ? '…' : pendingCount() }}
+      </div>
       <div class="px-label">待確認</div>
     </div>
     <div class="hub-stat">
-      <div class="px-bignum">—</div>
+      <div class="px-bignum">
+        {{ statsLoading() ? '…' : processingCount() }}
+      </div>
       <div class="px-label">處理中</div>
     </div>
     <div class="hub-stat">
-      <div class="px-bignum teal">—</div>
-      <div class="px-label">知識庫文件</div>
+      <div class="px-bignum teal">
+        {{ statsLoading() ? '…' : docCount() }}
+      </div>
+      <div class="px-label">知識庫片段</div>
     </div>
   </div>
 </div>

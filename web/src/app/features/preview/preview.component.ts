@@ -31,17 +31,27 @@ export class PreviewComponent implements OnInit, OnDestroy {
   readonly status        = computed(() => this.svc.session()?.status ?? '');
   readonly isConfirmed   = computed(() => this.status() === 'confirmed');
 
+  // Worker 仍在處理中（status=pending_preview 但 chunks 尚未出現）
+  readonly isWorkerRunning = computed(() =>
+    this.status() === 'pending_preview' && this.svc.chunks().length === 0
+  );
+
   private _pollSub?: Subscription;
 
   readonly statusLabel = computed(() => {
+    if (this.isWorkerRunning()) return '解析中';
     const m: Record<string, string> = {
-      pending_preview: '等待確認', confirmed: '已確認',
-      processing: '處理中', done: '完成', failed: '已拒絕',
+      pending_preview: '等待確認',
+      confirmed: '已確認',
+      processing: '處理中',
+      done: '完成',
+      failed: '已拒絕',
     };
     return m[this.status()] ?? this.status();
   });
 
   readonly statusColor = computed((): 'teal' | 'rust' | 'ink' | '' => {
+    if (this.isWorkerRunning()) return '';
     const s = this.status();
     if (s === 'pending_preview' || s === 'done') return 'teal';
     if (s === 'failed') return 'rust';
@@ -50,9 +60,19 @@ export class PreviewComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.svc.loadSession(this.sessionId);
-    if (this.svc.session()?.status === 'pending_preview') {
+    // Step 1：只打 status，快速顯示頁面框架
+    await this.svc.loadStatus(this.sessionId);
+
+    const status = this.svc.session()?.status;
+
+    if (status === 'pending_preview') {
+      // Step 2：先試著撈一次 chunks（若 Worker 剛好跑完就直接顯示）
+      await this.svc.tryLoadChunks(this.sessionId);
+      // Step 3：啟動 polling，chunks 還是空的話每 3 秒重試
       this._pollSub = this.svc.startPolling(this.sessionId);
+    } else {
+      // confirmed / done / failed → Worker 肯定跑完了，直接撈
+      await this.svc.tryLoadChunks(this.sessionId);
     }
   }
 
