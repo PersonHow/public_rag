@@ -2,9 +2,9 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminService, CompanyRow, CompanyCreate } from '../../../core/services/admin.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { PageHeadComponent } from '../../../shared/ui/page-head/page-head.component';
-import { StatusBadgeComponent } from '../../../shared/ui/status-badge/status-badge.component';
-import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
+import { PageHeadComponent } from '../../../shared/components/page-head/page-head.component';
+import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TruncateIdPipe } from '../../../shared/pipes/truncate-id.pipe';
 
 @Component({

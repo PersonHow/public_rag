@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
+import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
 
 interface SourceItem {
   doc_filename: string;

@@ -6,10 +6,10 @@ import { PreviewService } from '../../core/services/preview.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Chunk } from '../../shared/models';
-import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
-import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
-import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
+import { StepperComponent } from '../../shared/components/stepper/stepper.component';
+import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { TruncateIdPipe } from '../../shared/pipes/truncate-id.pipe';
 
 @Component({

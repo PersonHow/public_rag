@@ -4,8 +4,8 @@ import { UploadService } from '../../core/services/upload.service';
 import { UploadJob } from '../../shared/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { StepperComponent } from '../../shared/ui/stepper/stepper.component';
-import { PageHeadComponent } from '../../shared/ui/page-head/page-head.component';
+import { StepperComponent } from '../../shared/components/stepper/stepper.component';
+import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
 
 @Component({
   selector: 'app-upload',

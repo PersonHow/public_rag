@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guard';
-import { adminGuard, superadminGuard } from './core/auth/role.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { adminGuard, superadminGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'hub' },
