@@ -17,7 +17,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.routers import health, sessions, upload
 from app.routers import auth, rules                             # Phase 2 / Phase 3
-from app.routers import query                                   # Phase 5
+from app.routers import query, preview                          # Phase 5
 from app.routers.internal import tasks
 from app.routers.admin import companies, users, internal_setup  # Phase 2
 
@@ -80,6 +80,7 @@ app.include_router(rules.router)
 
 # Phase 5
 app.include_router(query.router)
+app.include_router(preview.router)
 
 
 @app.get("/")

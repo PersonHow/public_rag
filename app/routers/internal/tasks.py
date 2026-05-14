@@ -17,6 +17,9 @@ Phase 4 變更：
   - _save_chunks_to_db 新增 face 欄位
   - 新增 ingest_chunks endpoint（從 SQL 讀 chunks → 向量化 → Qdrant upsert）
   - 新增 inject_gcs_paths endpoint（TAP 路徑注入，全公司範圍，可隨時重跑）
+
+Phase 5 變更：
+  -新增 chunk_index（enumerate 保留文件內順序）。
 """
 import uuid
 from datetime import datetime, timezone
@@ -579,10 +582,11 @@ async def _save_chunks_to_db(
     rule_version = company_context["rule_version"]
     session.rule_version_used = rule_version
 
-    for chunk_output in chunk_outputs:
+    for idx, chunk_output in enumerate(chunk_outputs):
         chunk = Chunk(
             doc_id=document.doc_id,
             company_id=company_id_uuid,
+            chunk_index=idx,
             rule_version=rule_version,
             doc_type=document.doc_type,
             embed_text=chunk_output.embed_text,

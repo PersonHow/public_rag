@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +63,9 @@ class Chunk(Base):
     # 保留各公司術語多租戶彈性，TAP 路徑注入時轉換為檔名後綴
     face: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
 
+    # ── Phase 5 新增：chunk 排序索引（Nullable，向後相容）────────────────
+    chunk_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
     # ── 附件（Nullable，後處理注入）──────────────────────
     code_gcs_path: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     drawing_gcs_path: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
@@ -70,6 +73,7 @@ class Chunk(Base):
     __table_args__ = (
         # inject-gcs-paths 查詢：WHERE company_id=? AND product_id IS NOT NULL AND code_gcs_path IS NULL
         Index("ix_chunks_company_code_path", "company_id", "code_gcs_path"),
+        Index("ix_chunks_doc_id_chunk_index", "doc_id", "chunk_index"),
         # product_id 比對查詢加速
         Index("ix_chunks_company_product_id", "company_id", "product_id"),
     )
