@@ -15,7 +15,8 @@ import { TruncateIdPipe } from '../../shared/pipes/truncate-id.pipe';
 @Component({
   selector: 'app-preview',
   standalone: true,
-  imports: [RouterLink, FormsModule, StepperComponent, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe],
+  imports: [RouterLink, FormsModule, StepperComponent, PageHeadComponent,
+            StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe],
   templateUrl: './preview.component.html',
   styleUrl: './preview.component.scss',
 })
@@ -31,7 +32,13 @@ export class PreviewComponent implements OnInit, OnDestroy {
   readonly status        = computed(() => this.svc.session()?.status ?? '');
   readonly isConfirmed   = computed(() => this.status() === 'confirmed');
 
-  // Worker 仍在處理中（status=pending_preview 但 chunks 尚未出現）
+  // ── Phase 5：整體預覽 tab ──────────────────────────────
+  // 'card' = 原本卡片模式；'full' = 整體預覽
+  readonly viewMode = signal<'card' | 'full'>('card');
+
+  // 只有選定特定文件時才顯示 tab
+  readonly showViewTabs = computed(() => !!this.svc.selectedDocId());
+
   readonly isWorkerRunning = computed(() =>
     this.status() === 'pending_preview' && this.svc.chunks().length === 0
   );
@@ -60,18 +67,12 @@ export class PreviewComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
-    // Step 1：只打 status，快速顯示頁面框架
     await this.svc.loadStatus(this.sessionId);
-
     const status = this.svc.session()?.status;
-
     if (status === 'pending_preview') {
-      // Step 2：先試著撈一次 chunks（若 Worker 剛好跑完就直接顯示）
       await this.svc.tryLoadChunks(this.sessionId);
-      // Step 3：啟動 polling，chunks 還是空的話每 3 秒重試
       this._pollSub = this.svc.startPolling(this.sessionId);
     } else {
-      // confirmed / done / failed → Worker 肯定跑完了，直接撈
       await this.svc.tryLoadChunks(this.sessionId);
     }
   }
@@ -79,6 +80,22 @@ export class PreviewComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this._pollSub?.unsubscribe();
     this.svc.reset();
+  }
+
+  // ── 切換文件時重置 viewMode 並清快取 ──────────────────
+  selectDoc(docId: string | null): void {
+    this.svc.selectedDocId.set(docId);
+    this.viewMode.set('card');       // 切文件時回到卡片模式
+    this.svc.fullText.set(null);     // 清快取，避免顯示舊文件內容
+  }
+
+  // ── 切到整體預覽時才觸發 API ──────────────────────────
+  async switchToFullView(): Promise<void> {
+    this.viewMode.set('full');
+    const docId = this.svc.selectedDocId();
+    if (docId) {
+      await this.svc.loadFullText(this.sessionId, docId);
+    }
   }
 
   async onConfirm(): Promise<void> {

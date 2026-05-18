@@ -50,3 +50,27 @@ export interface SessionChunksResponse {
   chunks: Chunk[];
   chunk_count: number;
 }
+
+// ── Phase 5：整體預覽 ──────────────────────────────────────
+export interface FullTextChunk {
+  chunk_id: string;
+  chunk_index: number | null;
+  product_name?: string;
+  product_id?: string;
+  situation?: string;
+  action?: string;
+  reason?: string;
+  applies_to?: string;
+  material?: string;
+  dimensions?: string;
+  face?: string;
+  case_id?: string;
+  embed_text: string;
+}
+
+export interface FullTextResponse {
+  doc_id: string;
+  filename: string;
+  chunk_count: number;
+  chunks: FullTextChunk[];
+}
