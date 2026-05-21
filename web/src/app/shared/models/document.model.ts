@@ -16,31 +16,30 @@ export interface Chunk {
   chunk_id: string;
   doc_id: string;
   company_id: string;
+  chunk_index: number | null;
   doc_type: string;
-  rule_version: string;
+
+  // 識別欄位
+  product_name: string | null;
+  product_id: string | null;
+  case_id: string | null;
+  face: string | null;
+
+  // 結構欄位（v2 新增，若原本沒有需補上）
+  material: string | null;
+  dimensions: string | null;
+  situation: string | null;
+  action: string | null;
+  reason: string | null;
+  applies_to: string | null;
+
+  // 向量搜尋用
   embed_text: string;
-  created_at: string | null;
 
-  // spec group
-  product_name?: string;
-  product_id?: string;
-  material?: string;
-  dimensions?: string;
-  specs?: string;
-  face?: string;
+  // 文件品質
+  has_low_confidence?: boolean;
 
-  // knowledge group
-  situation?: string;
-  action?: string;
-  reason?: string;
-  applies_to?: string;
-
-  // common
-  case_id?: string;
-
-  // attachments
-  code_gcs_path?: string;
-  drawing_gcs_path?: string;
+  created_at?: string;
 }
 
 export interface SessionChunksResponse {

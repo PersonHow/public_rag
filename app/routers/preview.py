@@ -26,8 +26,12 @@ class ChunkSummary(BaseModel):
     chunk_index: Optional[int]
     product_name: Optional[str]
     product_id: Optional[str]
+    material: Optional[str]
+    dimensions: Optional[str]
     situation: Optional[str]
     action: Optional[str]
+    reason: Optional[str]
+    applies_to: Optional[str]
     embed_text: str
 
     class Config:
@@ -49,13 +53,15 @@ async def get_document_full_text(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. 驗證 session 屬於該 company
-    session_result = await db.execute(
-        select(IngestionSession).where(
-            IngestionSession.session_id == session_id,
-            IngestionSession.company_id == current_user.company_id,
-        )
+    # 1. 驗證 session 存在；superadmin 不過濾 company_id
+    session_q = select(IngestionSession).where(
+        IngestionSession.session_id == session_id
     )
+    if current_user.role != "superadmin":
+        session_q = session_q.where(
+            IngestionSession.company_id == current_user.company_id
+        )
+    session_result = await db.execute(session_q)
     if not session_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Session 不存在")
 
@@ -67,18 +73,15 @@ async def get_document_full_text(
     if not document:
         raise HTTPException(status_code=404, detail="Document 不存在")
 
-    # 3. 撈 chunks，chunk_index 優先，fallback created_at
-    chunks_result = await db.execute(
-        select(Chunk)
-        .where(
-            Chunk.doc_id == doc_id,
-            Chunk.company_id == current_user.company_id,
-        )
-        .order_by(
-            Chunk.chunk_index.asc().nulls_last(),
-            Chunk.created_at.asc(),
-        )
+    # 3. 撈 chunks；superadmin 不過濾 company_id
+    chunks_q = select(Chunk).where(Chunk.doc_id == doc_id)
+    if current_user.role != "superadmin":
+        chunks_q = chunks_q.where(Chunk.company_id == current_user.company_id)
+    chunks_q = chunks_q.order_by(
+        Chunk.chunk_index.asc().nulls_last(),
+        Chunk.created_at.asc(),
     )
+    chunks_result = await db.execute(chunks_q)
     chunks = chunks_result.scalars().all()
 
     return DocumentFullTextResponse(

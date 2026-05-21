@@ -25,6 +25,19 @@ export class PreviewService {
   readonly fullText        = signal<FullTextResponse | null>(null);
   readonly fullTextLoading = signal(false);
 
+  // ── 便利 alias（供 template 使用）──────────────────────
+  /** filter 的 alias，讓 template 可用 svc.searchQuery() */
+  readonly searchQuery = computed(() => this.filter());
+
+  /** 全部 chunks 數量 */
+  readonly totalChunks = computed(() => this.chunks().length);
+
+  /** 設定搜尋關鍵字 */
+  setSearch(q: string): void {
+    this.filter.set(q);
+  }
+
+  // ── Computed ──────────────────────────────────────────
   readonly lowConfidenceCount = computed(() =>
     this.documents().filter(d => d.has_low_confidence).length
   );
@@ -40,13 +53,13 @@ export class PreviewService {
       const matchDoc = !docId || c.doc_id === docId;
       const matchQ   = !q ||
         (c.product_name ?? '').toLowerCase().includes(q) ||
-        (c.embed_text ?? '').toLowerCase().includes(q) ||
-        (c.case_id ?? '').toLowerCase().includes(q);
+        (c.embed_text   ?? '').toLowerCase().includes(q) ||
+        (c.case_id      ?? '').toLowerCase().includes(q);
       return matchDoc && matchQ;
     });
   });
 
-  // ── 載入 session status ───────────────────────────────────
+  // ── 載入 session status ───────────────────────────────
   async loadStatus(sessionId: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -64,7 +77,13 @@ export class PreviewService {
     }
   }
 
-  // ── 嘗試撈 chunks ────────────────────────────────────────
+  // ── 便利方法：status + chunks 一次載入（供 component 使用）──
+  async loadSession(sessionId: string): Promise<void> {
+    await this.loadStatus(sessionId);
+    await this.tryLoadChunks(sessionId);
+  }
+
+  // ── 嘗試撈 chunks ────────────────────────────────────
   async tryLoadChunks(sessionId: string): Promise<void> {
     try {
       const data = await firstValueFrom(
@@ -74,15 +93,12 @@ export class PreviewService {
       );
       this.documents.set(data.documents);
       this.chunks.set(data.chunks);
-      if (!this.selectedDocId() && data.documents.length > 0) {
-        this.selectedDocId.set(data.documents[0].doc_id);
-      }
     } catch (_) {
       // Worker 未完成，靜默忽略
     }
   }
 
-  // ── Phase 5：整體預覽 API ────────────────────────────────
+  // ── Phase 5：整體預覽 API ────────────────────────────
   async loadFullText(sessionId: string, docId: string): Promise<void> {
     // 已有相同文件的快取就不重打
     if (this.fullText()?.doc_id === docId) return;
@@ -96,15 +112,14 @@ export class PreviewService {
         )
       );
       this.fullText.set(data);
-    } catch (e: any) {
-      // 靜默失敗，UI 層顯示錯誤提示
+    } catch {
       this.fullText.set(null);
     } finally {
       this.fullTextLoading.set(false);
     }
   }
 
-  // ── Polling ──────────────────────────────────────────────
+  // ── Polling ──────────────────────────────────────────
   startPolling(sessionId: string) {
     return interval(3000).pipe(
       switchMap(() =>

@@ -1,76 +1,123 @@
-// ── Phase 5：View Mode Tabs ───────────────────────────────
-.view-tabs {
-  display: flex; gap: 0; margin-bottom: 14px;
-  border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
-  width: fit-content;
-}
+// ══════════════════════════════════════════════════════════
+// preview.component.scss — 父層 layout 樣式
+// gc-* 樣式 → chunk-card.component.scss
+// ftv-* 樣式 → fulltext-view.component.scss
+// ══════════════════════════════════════════════════════════
 
-.view-tab {
-  padding: 8px 18px;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  letter-spacing: .1em; text-transform: uppercase;
-  background: var(--bg-2); color: var(--muted);
-  border: none; border-right: 1.5px solid var(--ink);
-  cursor: pointer; transition: background .1s, color .1s;
-
-  &:last-child { border-right: none; }
-  &:hover:not(.active) { background: var(--bg-3); color: var(--ink); }
-  &.active { background: var(--ink); color: var(--cream); }
-}
-
-// ── Phase 5：整體預覽 ─────────────────────────────────────
-.full-text-loading {
-  display: flex; align-items: center; gap: 10px;
-  padding: 32px 0; color: var(--muted);
-  font-family: var(--font-mono); font-size: 12px;
-}
-
-.full-text-wrap {
-  border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
-  background: var(--bg-2); margin-bottom: 24px;
+// ── Doc picker ───────────────────────────────────────────
+.mv-doc-picker {
+  border: 2px solid var(--ink); background: var(--bg-2);
+  box-shadow: 5px 5px 0 var(--ink); padding: 12px 16px; margin-bottom: 18px;
   position: relative;
 
   &::before {
-    content: "FULL_TEXT_VIEW"; position: absolute; top: -9px; left: 18px;
+    content: "FILES_QUEUE"; position: absolute; top: -9px; left: 18px;
     background: var(--bg-2); padding: 0 8px;
     font-family: var(--font-mono); font-size: 9px; font-weight: 700;
     letter-spacing: .2em; color: var(--ink);
   }
 }
 
-.full-text-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 16px; border-bottom: 1.5px solid var(--ink);
-  background: var(--bg-3);
+.doc-list-h { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 6px; }
+
+.doc-item {
+  flex-shrink: 0; cursor: pointer;
+  border: 2px solid var(--line); padding: 8px 14px;
+  background: var(--bg-3); transition: border-color .12s, background .12s;
+  min-width: 120px;
+
+  &:hover { border-color: var(--ink); background: var(--bg-2); }
+
+  &.active {
+    border-color: var(--ink); background: var(--ink);
+    .doc-name { color: var(--cream); }
+    .doc-meta { color: var(--cream); opacity: .6; }
+  }
 }
 
-.ft-segment {
-  border-bottom: 1px solid var(--line);
-
-  &:last-child { border-bottom: none; }
+.doc-name {
+  display: block; font-family: var(--font-mono); font-size: 11px;
+  font-weight: 700; color: var(--ink); word-break: break-all;
 }
 
-.ft-seg-head {
-  display: flex; align-items: baseline; gap: 10px;
-  padding: 10px 16px 6px;
-  border-bottom: 1px dashed var(--line-2);
+.doc-meta {
+  display: block; font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); margin-top: 2px;
 }
 
-.ft-seg-num {
-  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase;
-  color: var(--teal); flex-shrink: 0;
-  background: rgba(25,114,120,.07); padding: 2px 8px;
-  border: 1px solid var(--teal);
+.doc-type { letter-spacing: .08em; }
+
+// ── View tabs ─────────────────────────────────────────────
+.view-tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--ink);
 }
 
-.ft-seg-title {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  color: var(--ink); letter-spacing: .04em;
+.view-tab {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; padding: 8px 20px;
+  border: 2px solid var(--ink); border-bottom: none;
+  background: var(--bg-3); color: var(--muted);
+  cursor: pointer; margin-bottom: -2px;
+  transition: background .12s, color .12s;
+
+  &:hover { background: var(--bg-2); color: var(--ink); }
+  &.active { background: var(--ink); color: var(--cream); }
 }
 
-.ft-seg-body {
-  padding: 10px 16px 14px;
-  font-size: 13px; line-height: 1.75; color: var(--ink);
-  white-space: pre-wrap; word-break: break-word;
+// ── 卡片模式：亮色底容器（個別卡片樣式在 chunk-card）────
+.card-wrap {
+  border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  background: var(--bg-2); margin-bottom: 24px; position: relative;
+  max-height: 70vh; overflow-y: auto;
+}
+
+.card-list {
+  display: flex; flex-direction: column; gap: 16px; padding: 20px 20px 24px;
+}
+
+// ── 整體預覽：loading（wrap 本身在 fulltext-view）────────
+.ft-loading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 24px 0; justify-content: center; color: var(--muted); font-size: 12px;
+}
+
+// ── Confirm bar（fixed，與 topbar 同寬）──────────────────
+.confirm-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--bg-2);
+  background-image: repeating-linear-gradient(45deg, var(--bg-2) 0 8px, var(--bg-3) 8px 9px);
+  border-top: 2px solid var(--ink);
+  box-shadow: 0 -3px 0 var(--rust);
+  padding: 5px 32px;
+  display: flex; align-items: center; gap: 12px;
+
+  .info { flex: 1; display: flex; align-items: center; gap: 14px; font-size: 13px; }
+}
+
+// ── Status bar / alerts ───────────────────────────────────
+.status-bar {
+  padding: 12px 16px; margin-bottom: 18px;
+  border: 2px solid; display: flex; align-items: center; gap: 12px; font-size: 13px;
+
+  &.confirmed { border-color: var(--teal); box-shadow: 3px 3px 0 var(--teal); color: var(--teal); }
+  &.failed    { border-color: var(--rust);  box-shadow: 3px 3px 0 var(--rust);  color: var(--rust); }
+  &.processing {
+    border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink);
+    color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+  }
+}
+
+.low-conf-alert {
+  padding: 10px 16px; margin-bottom: 18px;
+  border: 2px solid var(--rust); background: rgba(196,69,54,.06);
+  font-size: 13px; color: var(--ink);
+
+  .pill { font-size: 10px; font-weight: 700; padding: 1px 6px; }
+  .pill.rust { background: var(--rust); color: #fff; }
+}
+
+.api-error {
+  padding: 12px 16px; border: 2px solid var(--rust);
+  background: rgba(196,69,54,.06); color: var(--rust); font-size: 13px;
+  margin-bottom: 16px;
 }

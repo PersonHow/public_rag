@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # ── Vertex AI / Gemini ───────────────────────────────
     VERTEX_AI_PROJECT: str = ""
     VERTEX_AI_LOCATION: str = "us-central1"
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
     GEMINI_MAX_RETRIES: int = 3
     GEMINI_PDF_TIMEOUT_SEC: int = 120
 

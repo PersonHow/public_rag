@@ -1,0 +1,72 @@
+<div class="ftv-wrap">
+
+  <!-- 產品節主體 -->
+  <div class="ftv-body">
+    @for (section of sections; track section.productName; let si = $index) {
+
+      <div class="ftv-section">
+
+        <!-- 產品節標題列 -->
+        <div class="ftv-section-head">
+          <h3 class="ftv-section-name">{{ section.productName }}</h3>
+          @if (section.productId) {
+            <span class="ftv-section-pid">{{ section.productId }}</span>
+          }
+          <div class="ftv-section-rule"></div>
+          <span class="ftv-section-count">{{ section.items.length }} 條</span>
+        </div>
+
+        <!-- 材料 + 尺寸 specs -->
+        @if (section.material || section.dimensions) {
+          <div class="ftv-specs">
+            @if (section.material) {
+              <span class="ftv-spec">
+                <span class="ftv-spec-label">材料</span>{{ section.material }}
+              </span>
+            }
+            @if (section.dimensions) {
+              <span class="ftv-spec">
+                <span class="ftv-spec-label">尺寸</span>{{ section.dimensions }}
+              </span>
+            }
+          </div>
+        }
+
+        <div class="ftv-intro">應注意：</div>
+
+        <!-- 條列清單 -->
+        <ol class="ftv-list">
+          @for (item of section.items; track item.chunk_id; let idx = $index) {
+            <li class="ftv-item">
+
+              <span class="ftv-item-num">{{ idx + 1 }}.</span>
+
+              <div class="ftv-item-body">
+                @if (item.situation) {
+                  <p class="ftv-situation">{{ item.situation }}</p>
+                }
+                <!-- 只保留原因（紅色），動作與適用不顯示 -->
+                @if (item.reason) {
+                  <p class="ftv-reason">
+                    <span class="ftv-reason-label">原因</span>{{ item.reason }}
+                  </p>
+                }
+                @if (!item.situation && !item.reason) {
+                  <p class="ftv-empty">（無語意內容）</p>
+                }
+              </div>
+
+            </li>
+          }
+        </ol>
+
+      </div>
+
+      <!-- 節間分隔線（最後一節不顯示） -->
+      @if (si < sections.length - 1) {
+        <hr class="ftv-divider" />
+      }
+    }
+  </div>
+
+</div>

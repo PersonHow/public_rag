@@ -1,0 +1,75 @@
+<div class="gc">
+
+  <!-- Header：產品名 + tags + 筆數 -->
+  <div class="gc-head">
+    <div class="gc-head-left">
+      <span class="gc-product">{{ group.productName }}</span>
+      @if (group.material)   { <span class="gc-tag">{{ group.material }}</span> }
+      @if (group.dimensions) { <span class="gc-tag">{{ group.dimensions }}</span> }
+    </div>
+    <div class="gc-head-right">
+      <span class="gc-count-badge">{{ group.chunks.length }} 筆</span>
+      <span class="gc-doctype">{{ group.docType }}</span>
+    </div>
+  </div>
+
+  <!-- Body：當前 chunk 欄位 -->
+  <div class="gc-body">
+
+    <div class="gc-chunk-id">{{ active.chunk_id | slice:0:8 }}…</div>
+
+    <div class="gc-fields">
+      @if (active.situation) {
+        <div class="gc-field">
+          <span class="gc-field-label">狀況</span>
+          <span class="gc-field-value">{{ active.situation }}</span>
+        </div>
+      }
+      @if (active.action) {
+        <div class="gc-field">
+          <span class="gc-field-label">動作</span>
+          <span class="gc-field-value">{{ active.action }}</span>
+        </div>
+      }
+      @if (active.reason) {
+        <div class="gc-field">
+          <span class="gc-field-label">原因</span>
+          <span class="gc-field-value">{{ active.reason }}</span>
+        </div>
+      }
+      @if (active.applies_to) {
+        <div class="gc-field">
+          <span class="gc-field-label">適用</span>
+          <span class="gc-field-value">{{ active.applies_to }}</span>
+        </div>
+      }
+      @if (!active.situation && !active.action && !active.reason && !active.applies_to) {
+        <div class="gc-field">
+          <span class="gc-field-value gc-field-value--empty">（無結構欄位）</span>
+        </div>
+      }
+    </div>
+
+    <!-- Embed text 摺疊區 -->
+    <div class="gc-embed">
+      <button class="gc-embed-toggle" (click)="toggleEmbed()">
+        <span class="gc-embed-label">EMBED_TEXT</span>
+        <span class="gc-embed-arrow">{{ embedExpanded() ? '▴' : '▾' }}</span>
+      </button>
+      @if (embedExpanded()) {
+        <div class="gc-embed-text">{{ active.embed_text }}</div>
+      }
+    </div>
+
+  </div>
+
+  <!-- Nav footer：超過 1 筆才顯示 -->
+  @if (group.chunks.length > 1) {
+    <div class="gc-nav">
+      <button class="gc-nav-btn" (click)="prev()">‹</button>
+      <span class="gc-nav-indicator">{{ carouselIdx() + 1 }} / {{ group.chunks.length }}</span>
+      <button class="gc-nav-btn" (click)="next()">›</button>
+    </div>
+  }
+
+</div>

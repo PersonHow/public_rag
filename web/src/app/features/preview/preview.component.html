@@ -31,7 +31,6 @@
       <a class="btn rust sm" routerLink="/upload">重新上傳</a>
     </div>
   }
-
   @if (isWorkerRunning()) {
     <div class="status-bar processing">
       <span class="spinner"></span>
@@ -41,154 +40,82 @@
 
   @if (svc.lowConfidenceCount() > 0) {
     <div class="low-conf-alert">
-      ⚠ <strong>{{ svc.lowConfidenceCount() }} 份文件</strong> 含低信心欄位，請在確認前審視標示為 <span class="pill rust">LOW</span> 的 chunks。
+      ⚠ <strong>{{ svc.lowConfidenceCount() }} 份文件</strong> 含低信心欄位，請在確認前審視標示為
+      <span class="pill rust">LOW</span> 的 chunks。
     </div>
   }
 
   @if (svc.chunks().length > 0) {
 
-    <!-- Doc picker -->
+    <!-- ── Doc picker ── -->
     <div class="mv-doc-picker">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span class="px-label" style="margin:0">// FILES</span>
-        <span class="px-mono" style="font-size:11px;color:var(--muted)">{{ svc.documents().length }} 份 · {{ svc.chunks().length }} chunks</span>
+        <span class="px-mono" style="font-size:11px;color:var(--muted)">
+          {{ svc.documents().length }} 份 · {{ svc.chunks().length }} chunks
+        </span>
       </div>
       <div class="doc-list-h">
-        <!-- 全部文件（無整體預覽） -->
-        <button class="doc-item" [class.active]="svc.selectedDocId() === null"
-                (click)="selectDoc(null)">
-          <div class="nm">全部文件</div>
-          <div class="det">{{ svc.chunks().length }} chunks</div>
-        </button>
+        <div class="doc-item" [class.active]="!svc.selectedDocId()"
+             (click)="selectDoc(null)">
+          <span class="doc-name">全部文件</span>
+          <span class="doc-meta">{{ svc.chunks().length }} chunks</span>
+        </div>
         @for (doc of svc.documents(); track doc.doc_id) {
-          <button class="doc-item" [class.active]="svc.selectedDocId() === doc.doc_id"
-                  (click)="selectDoc(doc.doc_id)">
-            <div class="nm">
-              @if (doc.has_low_confidence) { <span class="flag-dot"></span> }
-              {{ doc.filename }}
-            </div>
-            <div class="det">{{ doc.doc_type.toUpperCase() }}</div>
-          </button>
+          <div class="doc-item" [class.active]="svc.selectedDocId() === doc.doc_id"
+               (click)="selectDoc(doc.doc_id)">
+            <span class="doc-name">{{ doc.filename }}</span>
+            <span class="doc-meta doc-type">{{ doc.doc_type | uppercase }}</span>
+          </div>
         }
       </div>
     </div>
 
-    <!-- ── Phase 5：View Mode Tabs（選定特定文件才顯示）── -->
+    <!-- ── View tabs（選定特定文件後才顯示）── -->
     @if (showViewTabs()) {
       <div class="view-tabs">
         <button class="view-tab" [class.active]="viewMode() === 'card'"
                 (click)="viewMode.set('card')">
-          ▦ 卡片模式
+          ■ 卡片模式
         </button>
         <button class="view-tab" [class.active]="viewMode() === 'full'"
-                (click)="switchToFullView()">
+                (click)="viewMode.set('full')">
           ≡ 整體預覽
         </button>
       </div>
     }
 
-    <!-- ── 卡片模式 ── -->
+    <!-- ════════════════════════════════════
+         卡片模式
+         ════════════════════════════════════ -->
     @if (viewMode() === 'card') {
 
-      <div class="filter-bar">
-        <span class="px-label" style="margin:0">// SEARCH</span>
-        <input class="filter-input" type="text" placeholder="搜尋 chunk…"
-               [value]="svc.filter()" (input)="svc.filter.set($any($event.target).value)" />
-        <span class="px-mono" style="font-size:11px;color:var(--muted);margin-left:auto">
-          {{ svc.filteredChunks().length }} / {{ svc.chunks().length }} chunks
-        </span>
-      </div>
-
-      <div class="chunks-list">
-        @for (chunk of svc.filteredChunks(); track chunk.chunk_id) {
-          <div class="chunk" [class.low]="isLowConf(chunk)">
-            <div class="chunk-head">
-              <span class="chunk-name">{{ chunk.product_name || chunk.case_id || '(unnamed)' }}</span>
-              <span class="chunk-id">{{ chunk.chunk_id | truncateId }}</span>
-              @if (isLowConf(chunk)) {
-                <span class="pill rust" style="margin-left:auto">LOW CONF</span>
-              }
-              <span class="px-mono" style="font-size:10px;color:var(--muted);margin-left:auto">{{ chunk.doc_type }}</span>
-            </div>
-            <div class="chunk-body">
-              <div class="specs">
-                @if (chunk.product_name) {
-                  <div class="spec"><span class="l">Product</span><span class="v">{{ chunk.product_name }}</span></div>
-                }
-                @if (chunk.material) {
-                  <div class="spec"><span class="l">材料</span><span class="v">{{ chunk.material }}</span></div>
-                }
-                @if (chunk.dimensions) {
-                  <div class="spec"><span class="l">尺寸</span><span class="v">{{ chunk.dimensions }}</span></div>
-                }
-                @if (chunk.face) {
-                  <div class="spec"><span class="l">Face</span><span class="v">{{ chunk.face }}</span></div>
-                }
-                @if (chunk.situation) {
-                  <div class="spec"><span class="l">狀況</span><span class="v">{{ chunk.situation }}</span></div>
-                }
-                @if (chunk.action) {
-                  <div class="spec"><span class="l">動作</span><span class="v">{{ chunk.action }}</span></div>
-                }
-                @if (chunk.reason) {
-                  <div class="spec"><span class="l">原因</span><span class="v">{{ chunk.reason }}</span></div>
-                }
-                @if (chunk.applies_to) {
-                  <div class="spec"><span class="l">適用範圍</span><span class="v">{{ chunk.applies_to }}</span></div>
-                }
-                @if (!hasAnyField(chunk)) {
-                  <div class="spec"><span class="v empty">（無抽取欄位）</span></div>
-                }
-              </div>
-              <div class="embed-text">
-                <span class="lab">embed_text</span>
-                {{ chunk.embed_text }}
-              </div>
-            </div>
-          </div>
-        }
-
-        @if (svc.filteredChunks().length === 0 && !svc.loading()) {
-          <app-empty-state message="無符合條件的 chunks" />
-        }
+      <div class="card-wrap">
+        <div class="card-list">
+          @for (group of groupedChunks(); track group.productName) {
+            <app-chunk-card [group]="group" />
+          }
+          @if (groupedChunks().length === 0) {
+            <app-empty-state message="無符合條件的 chunks" />
+          }
+        </div>
       </div>
     }
 
-    <!-- ── 整體預覽模式 ── -->
+    <!-- ════════════════════════════════════
+         整體預覽
+         ════════════════════════════════════ -->
     @if (viewMode() === 'full') {
 
       @if (svc.fullTextLoading()) {
-        <div class="full-text-loading">
+        <div class="ft-loading">
           <span class="spinner"></span>
           <span class="px-mono" style="font-size:12px">載入整體預覽…</span>
         </div>
       }
 
-      @if (!svc.fullTextLoading() && svc.fullText()) {
-        <div class="full-text-wrap">
-          <div class="full-text-header">
-            <span class="px-label" style="margin:0">// FULL TEXT</span>
-            <span class="px-mono" style="font-size:11px;color:var(--muted)">
-              {{ svc.fullText()!.filename }} · {{ svc.fullText()!.chunk_count }} 段
-            </span>
-          </div>
-          @for (fc of svc.fullText()!.chunks; track fc.chunk_id) {
-            <div class="ft-segment">
-              <div class="ft-seg-head">
-                <span class="ft-seg-num">
-                  第 {{ (fc.chunk_index ?? 0) + 1 }} / {{ svc.fullText()!.chunk_count }} 段
-                </span>
-                @if (fc.product_name) {
-                  <span class="ft-seg-title">{{ fc.product_name }}</span>
-                }
-                @if (fc.case_id && !fc.product_name) {
-                  <span class="ft-seg-title">{{ fc.case_id }}</span>
-                }
-              </div>
-              <div class="ft-seg-body">{{ fc.embed_text }}</div>
-            </div>
-          }
-        </div>
+      @if (!svc.fullTextLoading() && svc.fullText(); as ft) {
+        <app-fulltext-view [fullText]="ft" />
       }
 
       @if (!svc.fullTextLoading() && !svc.fullText()) {
@@ -196,7 +123,7 @@
       }
     }
 
-    <!-- Confirm bar -->
+    <!-- ── Confirm bar ── -->
     @if (svc.canConfirm() && isAdmin()) {
       <div class="confirm-bar">
         <div class="info">
@@ -209,5 +136,6 @@
         </button>
       </div>
     }
+
   }
 }

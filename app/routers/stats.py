@@ -1,5 +1,5 @@
 """
-app/routers/dashboard.py
+app/routers/stats.py
 
 GET /dashboard/stats — Hub 首頁統計數字
 
