@@ -1,0 +1,83 @@
+<app-page-head
+  stamp="ADMIN · COMPANIES"
+  title="租戶管理"
+  desc="所有公司／租戶（superadmin 專用）">
+  <div actions style="display:flex;gap:8px">
+    <button class="btn" (click)="load()">↺ 重新整理</button>
+    <button class="btn primary" (click)="openForm()">＋ 新增租戶</button>
+  </div>
+</app-page-head>
+
+<!-- ── 建立租戶表單 ─────────────────────────────────────────── -->
+@if (showForm()) {
+  <div class="form-panel card">
+    <div class="form-panel__head">
+      <span class="px-mono" style="font-size:11px;letter-spacing:.1em">NEW COMPANY</span>
+      <button class="px-icon-btn" (click)="cancelForm()" title="關閉">✕</button>
+    </div>
+
+    <div class="form-panel__body">
+      <div class="field">
+        <label>公司名稱 <span style="color:var(--rust)">*</span></label>
+        <input type="text" [(ngModel)]="form.name" placeholder="Acme Corp" />
+      </div>
+
+      <div class="field">
+        <label>產業 <span style="color:var(--muted);font-size:10px">（選填）</span></label>
+        <input type="text" [(ngModel)]="form.industry"
+          placeholder="製造業、航空、半導體…" />
+      </div>
+
+      <div class="form-panel__actions">
+        <button class="btn" (click)="cancelForm()">取消</button>
+        <button class="btn primary" (click)="submit()" [disabled]="submitting() || !form.name.trim()">
+          {{ submitting() ? '建立中…' : '建立租戶' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── 租戶列表 ─────────────────────────────────────────────── -->
+@if (loading() || (!loading() && companies().length === 0 && !showForm())) {
+  <app-empty-state [loading]="loading()" message="無租戶資料">
+    @if (apiError()) {
+      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
+    }
+  </app-empty-state>
+}
+
+@if (!loading() && companies().length > 0) {
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="co-table">
+      <thead>
+        <tr>
+          <th>Company ID</th>
+          <th>公司名稱</th>
+          <th>產業</th>
+          <th>狀態</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of companies(); track c.company_id) {
+          <tr>
+            <td class="uid">{{ c.company_id | truncateId }}</td>
+            <td><strong>{{ c.name }}</strong></td>
+            <td style="color:var(--muted);font-size:12px">{{ c.industry ?? '—' }}</td>
+            <td>
+              <app-status-badge
+                [label]="c.is_active ? '啟用' : '停用'"
+                [color]="c.is_active ? 'teal' : 'rust'" />
+            </td>
+            <td>
+              @if (c.is_active) {
+                <button class="btn btn-danger-sm" (click)="deactivate(c)">停用</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

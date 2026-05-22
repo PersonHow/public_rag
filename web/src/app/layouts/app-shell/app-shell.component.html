@@ -1,0 +1,83 @@
+<header class="topbar">
+  <button class="tb-brand" routerLink="/hub">
+    <div class="brand-dot small"></div>
+    <span class="px-mono">PUBLIC_LLM</span>
+  </button>
+
+  @if (isSuperAdmin()) {
+    <div class="tb-company-picker">
+      <span class="px-label">TENANT</span>
+      <select class="co-select"
+        [ngModel]="ctx.activeCompanyId() ?? '' "
+        (ngModelChange)="onCompanyChange($event)">
+        <option value="">— 全局視角 —</option>
+        @for (c of ctx.companies(); track c.company_id) {
+          <option [value]="c.company_id">{{ c.name }}</option>
+        }
+      </select>
+    </div>
+  } @else {
+    <div class="tb-tenant">
+      <span class="px-label">TENANT</span>
+      <span class="px-mono" style="font-size:12px">{{ companyName() }}</span>
+    </div>
+  }
+
+  <nav class="tb-nav">
+    <a class="px-tab" routerLink="/upload" routerLinkActive="active">
+      <span class="px-tab-text">
+        <span class="px-section-num small">01</span>
+        <span>三步驟流程</span>
+      </span>
+    </a>
+    <a class="px-tab" routerLink="/chat" routerLinkActive="active">
+      <span class="px-tab-text">
+        <span class="px-section-num small">02</span>
+        <span>對話</span>
+      </span>
+    </a>
+    @if (isAdmin()) {
+      <a class="px-tab" routerLink="/admin/sessions" routerLinkActive="active">
+        <span class="px-tab-text">
+          <span class="px-section-num small">03</span>
+          <span>Sessions</span>
+        </span>
+      </a>
+      <a class="px-tab" routerLink="/admin/users" routerLinkActive="active">
+        <span class="px-tab-text">
+          <span class="px-section-num small">04</span>
+          <span>使用者</span>
+        </span>
+      </a>
+    }
+    @if (isSuperAdmin()) {
+      <a class="px-tab" routerLink="/admin/companies" routerLinkActive="active">
+        <span class="px-tab-text">
+          <span class="px-section-num small">05</span>
+          <span>租戶</span>
+        </span>
+      </a>
+    }
+  </nav>
+
+  <div class="tb-spacer"></div>
+
+  <div class="tb-me">
+    <div class="px-avatar">{{ avatarChar() }}</div>
+    <div class="me-meta">
+      <div class="nm">{{ email() }}</div>
+      <div class="rl">{{ role() }}</div>
+    </div>
+    <button class="px-icon-btn" (click)="logout()" title="登出">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="main-content">
+  <router-outlet />
+</div>

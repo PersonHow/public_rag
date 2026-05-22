@@ -1,0 +1,105 @@
+<app-page-head
+  stamp="ADMIN · USERS"
+  title="使用者管理"
+  desc="租戶成員與角色管理">
+  <div actions style="display:flex;gap:8px">
+    <button class="btn" (click)="load()">↺ 重新整理</button>
+    <button class="btn primary" (click)="openForm()">＋ 新增使用者</button>
+  </div>
+</app-page-head>
+
+<!-- ── 建立使用者表單 ───────────────────────────────────────── -->
+@if (showForm()) {
+  <div class="form-panel card">
+    <div class="form-panel__head">
+      <span class="px-mono" style="font-size:11px;letter-spacing:.1em">NEW USER</span>
+      <button class="px-icon-btn" (click)="cancelForm()" title="關閉">✕</button>
+    </div>
+
+    <div class="form-panel__body">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" [(ngModel)]="form.email" placeholder="user@example.com" />
+      </div>
+
+      <div class="field">
+        <label>密碼</label>
+        <input type="password" [(ngModel)]="form.password" placeholder="至少 8 碼" />
+      </div>
+
+      <div class="field">
+        <label>角色</label>
+        <select [(ngModel)]="form.role">
+          @for (r of availableRoles(); track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+      </div>
+
+      @if (isSuperAdmin()) {
+        <div class="field">
+          <label>Company ID <span style="color:var(--muted);font-size:10px">（superadmin 可留空）</span></label>
+          <input type="text" [(ngModel)]="form.company_id"
+            placeholder="UUID（superadmin 可不填）" />
+        </div>
+      }
+
+      <div class="form-panel__actions">
+        <button class="btn" (click)="cancelForm()">取消</button>
+        <button class="btn primary" (click)="submit()" [disabled]="submitting()">
+          {{ submitting() ? '建立中…' : '建立使用者' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── 使用者列表 ─────────────────────────────────────────── -->
+@if (loading() || (!loading() && users().length === 0 && !showForm())) {
+  <app-empty-state [loading]="loading()" message="無使用者資料">
+    @if (apiError()) {
+      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
+    }
+  </app-empty-state>
+}
+
+@if (!loading() && users().length > 0) {
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>User ID</th>
+          <th>Email</th>
+          <th>角色</th>
+          <th>狀態</th>
+          <th>Company</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of users(); track u.user_id) {
+          <tr>
+            <td class="uid">{{ u.user_id | truncateId }}</td>
+            <td>{{ u.email }}</td>
+            <td>
+              <app-status-badge [label]="u.role" [color]="roleColor(u.role)" />
+            </td>
+            <td>
+              <app-status-badge
+                [label]="u.is_active ? '啟用' : '停用'"
+                [color]="u.is_active ? 'teal' : 'rust'" />
+            </td>
+            <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">
+              {{ u.company_id ?? '—' }}
+            </td>
+            <td>
+              @if (u.is_active) {
+                <button class="btn btn-danger-sm" (click)="deactivate(u)">停用</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

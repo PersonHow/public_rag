@@ -1,0 +1,13 @@
+:host { display: contents; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}

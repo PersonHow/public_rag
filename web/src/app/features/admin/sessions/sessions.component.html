@@ -1,0 +1,53 @@
+<app-page-head
+  stamp="ADMIN · SESSIONS"
+  title="Session 管理"
+  desc="所有上傳 Session 與狀態（需要管理員角色）">
+  <button actions class="btn" (click)="load()">↺ 重新整理</button>
+</app-page-head>
+
+@if (loading() || (!loading() && sessions().length === 0 && !apiError())) {
+  <app-empty-state [loading]="loading()" message="目前沒有任何 Session 記錄" />
+}
+
+@if (!loading() && sessions().length > 0) {
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="sessions-table">
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>狀態</th>
+          <th>已確認</th>
+          <th>失敗原因</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of sessions(); track s.session_id) {
+          <tr>
+            <td class="session-id" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
+            <td>
+              <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
+            </td>
+            <td>{{ s.preview_confirmed ? '✓' : '—' }}</td>
+            <td style="color:var(--rust);font-size:12px">{{ s.fail_reason ?? '—' }}</td>
+            <td>
+              @if (s.status === 'pending_preview') {
+                <a class="btn sm" [routerLink]="['/preview', s.session_id]">預覽 ▸</a>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-foot">
+    共 {{ sessions().length }} 筆 · pending_preview: {{ pendingCount() }} 筆
+  </div>
+}
+
+@if (apiError()) {
+  <div class="api-error">
+    ⚠ {{ apiError() }}<br/>
+    <span style="color:var(--muted)">Sessions 列表 API 尚未實作（Phase 2+），顯示空列表。</span>
+  </div>
+}

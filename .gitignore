@@ -1,0 +1,32 @@
+# 機密設定（絕對不可 commit）
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# 測試快取
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 系統
+.DS_Store

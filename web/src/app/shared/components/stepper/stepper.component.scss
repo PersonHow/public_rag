@@ -1,0 +1,86 @@
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  border: 2px solid var(--ink);
+  background: var(--bg-2);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 18px 22px;
+  margin-bottom: 26px;
+  position: relative;
+
+  &::before {
+    content: "PROCESSING PIPELINE";
+    position: absolute;
+    top: -9px;
+    left: 18px;
+    background: var(--bg-2);
+    padding: 0 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    color: var(--ink);
+  }
+
+  .step {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+
+    .num {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--bg-3);
+      color: var(--muted);
+      border: 1.5px solid var(--ink);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .lab {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .16em;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .name {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    &.active {
+      .num  { background: var(--rust); color: var(--cream); box-shadow: 2px 2px 0px var(--rust); animation: pulse 1.6s infinite; }
+      .name { color: var(--rust); box-shadow: 2px 2px 0px var(--rust);}
+    }
+
+    &.done {
+      .num  { background: var(--teal); color: var(--cream); }
+      .name { color: var(--teal); }
+    }
+  }
+
+  .bar {
+    height: 0;
+    border-top: 2px dashed var(--ink);
+    min-width: 32px;
+    opacity: .5;
+
+    &.done { border-top-color: var(--teal); border-top-style: solid; opacity: 1; }
+  }
+}

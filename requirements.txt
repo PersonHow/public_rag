@@ -11,6 +11,9 @@ alembic==1.13.3
 # GCS
 google-cloud-storage==2.18.2
 
+# email
+email-validator==2.3.0
+
 # Document parsing
 python-docx==1.1.2
 pdfplumber==0.11.4   # 保留：upload 時用 python-magic 做 MIME 偵測備用
@@ -22,7 +25,7 @@ google-cloud-tasks==2.16.5
 google-auth==2.35.0
 google-auth-httplib2==0.2.0
 openai==1.51.0       # OpenAI-compat API for Vertex AI（DOCX 路徑用）
-httpx==0.27.2        # Vertex AI 原生 REST API（PDF 路徑用）
+httpx==0.27.2        # Vertex AI 原生 REST API（PDF 路徑、Embedding 路徑用）
 
 # Pydantic
 pydantic==2.9.2
@@ -35,3 +38,6 @@ tenacity==9.0.0
 
 # Logging
 python-json-logger==2.0.7
+
+# Phase 4 — 向量寫入
+qdrant-client==1.12.1

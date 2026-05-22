@@ -1,0 +1,9 @@
+<div class="empty-state">
+  @if (loading()) {
+    ⏳ 載入中…
+  } @else {
+    <div class="empty-icon">{{ icon() }}</div>
+    {{ message() }}
+    <ng-content />
+  }
+</div>

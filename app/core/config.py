@@ -9,9 +9,13 @@ app/core/config.py
   Document AI 相關設定全數移除。
   所有 PDF 直接送 Gemini Flash 視覺理解，不再走 OCR pipeline。
   min_confidence 欄位不再使用（has_low_confidence 語意改為 Gemini quality flag）。
+
+Phase 4 新增：
+  QDRANT_HOST / QDRANT_PORT / QDRANT_API_KEY
+  GEMINI_EMBEDDING_MODEL
 """
 from functools import lru_cache
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -22,8 +26,8 @@ class Settings(BaseSettings):
     # Phase 1 固定值。Phase 2 改為從 JWT token 取，不改此定義。
     DEFAULT_COMPANY_ID: str = "dev-company"
 
-    # Cloud Tasks worker 驗證用
-    INTERNAL_TOKEN: str = "dev-internal-token-change-in-prod"
+    # Cloud Tasks worker 驗證用（必須透過環境變數設定，無安全預設值）
+    INTERNAL_TOKEN: str 
 
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_db"
@@ -33,21 +37,56 @@ class Settings(BaseSettings):
 
     # ── GCS ──────────────────────────────────────────────
     GCS_BUCKET_NAME: str = "your-rag-bucket"
-    GCS_PROJECT: str=""
+    GCS_PROJECT: str = ""
 
     # ── Cloud Tasks ──────────────────────────────────────
     CLOUD_TASKS_PROJECT: str = ""
     CLOUD_TASKS_LOCATION: str = "asia-east1"
-    CLOUD_TASKS_QUEUE: str = "rag-ingestion"
+    CLOUD_TASKS_QUEUE: str = "onceagain-rag-ingestion"
     CLOUD_TASKS_MAX_RETRIES: int = 3
     WORKER_BASE_URL: str = "http://localhost:8000"
+
+    # ── JWT ──────────────────────────────────────────────
+    # 無安全預設值；必須在 .env 中設定（openssl rand -hex 32）
+    JWT_SECRET_KEY: str 
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_HOURS: int = 24
 
     # ── Vertex AI / Gemini ───────────────────────────────
     VERTEX_AI_PROJECT: str = ""
     VERTEX_AI_LOCATION: str = "us-central1"
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_MAX_RETRIES: int = 3
-    GEMINI_PDF_TIMEOUT_SEC:int = 120
+    GEMINI_PDF_TIMEOUT_SEC: int = 120
+
+    # ── Gemini Embedding（Phase 4）───────────────────────
+    # gemini-embedding-001：每次 1 筆，output_dimensionality=768 截短
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+
+    # ── Qdrant（Phase 4）────────────────────────────────
+    QDRANT_HOST: str = ""
+    QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
+    QDRANT_COLLECTION_NAME: str = ""
+
+    @model_validator(mode="after")
+    def _validate_required_in_production(self) -> "Settings":
+        """Production 環境強制要求關鍵欄位不得為空，防止錯誤設定上線。"""
+        if self.app_env != "production":
+            return self
+        required = {
+            "JWT_SECRET_KEY": self.JWT_SECRET_KEY,
+            "INTERNAL_TOKEN": self.INTERNAL_TOKEN,
+            "DATABASE_URL": self.DATABASE_URL,
+            "GCS_PROJECT": self.GCS_PROJECT,
+            "CLOUD_TASKS_PROJECT": self.CLOUD_TASKS_PROJECT,
+            "VERTEX_AI_PROJECT": self.VERTEX_AI_PROJECT,
+            "QDRANT_HOST": self.QDRANT_HOST,
+        }
+        missing = [k for k, v in required.items() if not v]
+        if missing:
+            raise ValueError(f"Production 環境缺少必填設定: {', '.join(missing)}")
+        return self
 
     # ── GCS 路徑規則（唯一定義處）────────────────────────
     # raw/  → 含 doc_id 層防止同名覆蓋

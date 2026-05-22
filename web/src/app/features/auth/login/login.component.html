@@ -1,0 +1,72 @@
+<div class="login-wrap">
+  <div class="login-bg-grid"></div>
+
+  <div class="login-corner tl">
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em">SYS / public-llm</div>
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">v4.0.0 · build 2026.04</div>
+  </div>
+  <div class="login-corner tr">
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">STATUS</div>
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--teal)">▣ SECURE</div>
+  </div>
+  <div class="login-corner bl">
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">SOC2 · ISO27001</div>
+  </div>
+  <div class="login-corner br">
+    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">RoHS · REACH</div>
+  </div>
+
+  <!-- Left hero -->
+  <div class="login-hero">
+    <div class="brand-row big">
+      <div class="brand-dot xl"></div>
+      <div>
+        <div class="px-section-num" style="border-top:0;font-size:10px">SYS / 01</div>
+        <div class="px-mono" style="font-size:11px;letter-spacing:.2em;color:var(--muted);margin-top:6px">INTERNAL · MULTI-TENANT LLM</div>
+      </div>
+    </div>
+    <h1 class="hero-h1">
+      把公司的<em>知識</em><br/>
+      變成隨手可問的<br/>
+      <span class="emph">同事</span>
+    </h1>
+    <div class="hero-foot">
+      <span class="px-stamp">RAG 知識庫</span>
+      <span class="px-stamp">多租戶資料隔離</span>
+      <span class="px-stamp">流向可審計</span>
+    </div>
+  </div>
+
+  <!-- Right form -->
+  <div class="login-form-col">
+    <div class="px-frame">
+      <div class="px-frame-stamp">SIGN IN · 01</div>
+      <h2 class="px-mono" style="font-size:22px;font-weight:700;margin:6px 0 2px">登入</h2>
+      <p class="px-tag-small" style="margin-bottom:14px">USE YOUR COMPANY E-MAIL</p>
+
+      <div class="px-rule"></div>
+
+      <form (ngSubmit)="onSubmit()" class="login-grid" autocomplete="off">
+        <label class="field">
+          <span class="px-label">// EMAIL</span>
+          <input type="email" [(ngModel)]="email" name="email" placeholder="you@company.com" required />
+        </label>
+        <label class="field">
+          <span class="px-label">// PASSWORD</span>
+          <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" required />
+        </label>
+        <button class="btn rust px-btn" type="submit" [disabled]="loading()">
+          {{ loading() ? '登入中…' : '[ 登入 ▸ ]' }}
+        </button>
+      </form>
+
+      <div class="px-rule"></div>
+
+      @if (errorMsg()) {
+        <div class="login-error">
+          ⚠ {{ errorMsg() }}
+        </div>
+      }
+    </div>
+  </div>
+</div>

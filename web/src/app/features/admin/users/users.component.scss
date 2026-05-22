@@ -1,0 +1,37 @@
+.users-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.users-table th,
+.users-table td {
+  text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle;
+}
+.users-table th {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; font-weight: 700; background: rgba(40,61,59,.04);
+}
+.users-table tr:hover td { background: var(--bg-3); }
+
+.uid { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ── Create user form panel ─────────────────────────── */
+.form-panel {
+  margin-bottom: 20px;
+}
+.form-panel__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.form-panel__body {
+  padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.form-panel__actions {
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;
+}
+
+/* ── Danger button variant ──────────────────────────── */
+.btn-danger-sm {
+  font-size: 11px; padding: 3px 10px;
+  background: transparent; color: var(--rust);
+  border: 1px solid var(--rust); border-radius: 4px; cursor: pointer;
+  transition: background .15s;
+}
+.btn-danger-sm:hover { background: rgba(var(--rust-rgb, 180,60,50),.08); }

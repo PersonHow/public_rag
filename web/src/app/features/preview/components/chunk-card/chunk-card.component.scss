@@ -1,0 +1,106 @@
+// ══════════════════════════════════════════════════════════
+// chunk-card.component.scss
+// ══════════════════════════════════════════════════════════
+
+:host { display: block; }
+
+.gc {
+  border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  background: var(--bg-3); overflow: hidden;
+}
+
+// ── Header ───────────────────────────────────────────────
+.gc-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; background: var(--ink);
+}
+
+.gc-head-left  { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.gc-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.gc-product {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  letter-spacing: .04em; color: var(--cream);
+}
+
+.gc-tag {
+  font-family: var(--font-mono); font-size: 10px; color: var(--cream);
+  border: 1px solid rgba(255,255,255,.25); padding: 1px 7px; opacity: .8;
+}
+
+.gc-count-badge {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink); background: var(--teal); padding: 1px 8px;
+}
+
+.gc-doctype {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--cream); letter-spacing: .08em; opacity: .6;
+}
+
+// ── Body ─────────────────────────────────────────────────
+.gc-body { padding: 14px 16px 0; background: var(--bg-2); }
+
+.gc-chunk-id {
+  font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+  letter-spacing: .08em; margin-bottom: 10px;
+}
+
+.gc-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+.gc-field { display: flex; align-items: baseline; gap: 10px; }
+
+.gc-field-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--teal); flex-shrink: 0; min-width: 32px;
+}
+
+.gc-field-value {
+  font-size: 13px; line-height: 1.7; color: var(--ink); word-break: break-word;
+  &--empty { color: var(--muted); font-style: italic; }
+}
+
+// ── Embed text 摺疊 ───────────────────────────────────────
+.gc-embed { border-top: 1px dashed var(--line); margin: 0 -16px; }
+
+.gc-embed-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 16px;
+  background: var(--bg-3); border: none; cursor: pointer; text-align: left;
+  &:hover { background: var(--line); }
+}
+
+.gc-embed-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .14em; color: var(--muted);
+}
+
+.gc-embed-arrow { font-size: 10px; color: var(--muted); margin-left: auto; }
+
+.gc-embed-text {
+  padding: 10px 16px 14px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+  color: var(--muted); white-space: pre-wrap; word-break: break-word;
+  background: var(--bg-3);
+}
+
+// ── Nav footer ────────────────────────────────────────────
+.gc-nav {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 10px 16px; border-top: 1.5px solid var(--ink); background: var(--bg-3);
+}
+
+.gc-nav-btn {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  color: var(--ink); background: none; border: 1.5px solid var(--ink);
+  width: 28px; height: 28px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; line-height: 1;
+  transition: background .1s, color .1s;
+  &:hover { background: var(--ink); color: var(--cream); }
+}
+
+.gc-nav-indicator {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--ink); letter-spacing: .06em; min-width: 40px; text-align: center;
+}
