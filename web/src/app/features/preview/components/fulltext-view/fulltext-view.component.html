@@ -51,6 +51,11 @@
                     <span class="ftv-reason-label">原因</span>{{ item.reason }}
                   </p>
                 }
+                @if(item.action){
+                  <p class="ftv-action">
+                    <span class="ftv-action-label">動作</span>{{ item.action }}
+                  </p>
+                }
                 @if (!item.situation && !item.reason) {
                   <p class="ftv-empty">（無語意內容）</p>
                 }

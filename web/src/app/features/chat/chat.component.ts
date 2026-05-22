@@ -1,9 +1,11 @@
-import { Component, signal, ElementRef, ViewChild, AfterViewChecked, inject } from '@angular/core';
+import { Component, signal, ElementRef, ViewChild, AfterViewChecked, inject, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
+import { AuthService } from '../../core/services/auth.service';
+import { CompanyContextService } from '../../core/services/company-context.service';
 
 interface SourceItem {
   doc_filename: string;
@@ -35,8 +37,21 @@ interface Message {
 })
 export class ChatComponent implements AfterViewChecked {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private readonly ctx  = inject(CompanyContextService);
 
   @ViewChild('msgBox') msgBox!: ElementRef<HTMLDivElement>;
+
+  readonly isSuperAdmin     = this.auth.isSuperAdmin;
+  readonly activeCompanyId  = this.ctx.activeCompanyId;
+  readonly activeCompany    = this.ctx.activeCompany;
+
+  // superadmin 已選租戶時顯示租戶名，否則提示需選擇
+  readonly tenantHint = computed(() => {
+    if (!this.isSuperAdmin()) return null;
+    const co = this.activeCompany();
+    return co ? co.name : null;
+  });
 
   private _idCounter = 0;
   readonly messages  = signal<Message[]>([
@@ -52,8 +67,18 @@ export class ChatComponent implements AfterViewChecked {
   async send(): Promise<void> {
     const text = this.inputText.trim();
     if (!text || this.botTyping()) return;
-    this.inputText = '';
 
+    // superadmin 必須先在頂部選擇租戶
+    if (this.isSuperAdmin() && !this.activeCompanyId()) {
+      this.messages.update(m => [...m, {
+        id: ++this._idCounter,
+        role: 'bot',
+        text: '⚠️ 請先在頂部選擇要查詢的租戶（TENANT 下拉選單）。',
+      }]);
+      return;
+    }
+
+    this.inputText = '';
     this.messages.update(m => [...m, { id: ++this._idCounter, role: 'user', text }]);
     this.botTyping.set(true);
 
@@ -61,8 +86,13 @@ export class ChatComponent implements AfterViewChecked {
     this.messages.update(m => [...m, { id: typingId, role: 'bot', text: '', typing: true }]);
 
     try {
+      // superadmin 帶 ?company_id= query param；其他角色 company_id 從 JWT 取，不需帶
+      const url = this.isSuperAdmin()
+        ? `${environment.apiUrl}/query?company_id=${this.activeCompanyId()}`
+        : `${environment.apiUrl}/query`;
+
       const res = await firstValueFrom(
-        this.http.post<QueryResponse>(`${environment.apiUrl}/query`, { question: text, top_k: 5 })
+        this.http.post<QueryResponse>(url, { question: text, top_k: 5 })
       );
       this.messages.update(m =>
         m.map(msg => msg.id === typingId

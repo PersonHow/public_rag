@@ -82,6 +82,16 @@
   letter-spacing: .1em; color: var(--rust); opacity: .75; flex-shrink: 0; padding-top: 1px;
 }
 
+.ftv-action {
+  margin: 0; font-size: 14px; line-height: 1.7; color: var(--teal);
+  word-break: break-word; display: flex; align-items: baseline; gap: 6px; padding-left: 2px;
+}
+
+.ftv-action-label {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .1em; color: var(--teal); opacity: .75; flex-shrink: 0; padding-top: 1px;
+}
+
 .ftv-empty { margin: 0; color: var(--muted); font-style: italic; font-size: 12px; }
 
 // ── 節間分隔線 ────────────────────────────────────────────

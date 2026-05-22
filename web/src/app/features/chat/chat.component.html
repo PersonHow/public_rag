@@ -1,5 +1,11 @@
 <app-page-head title="對話" desc="詢問知識庫中的加工參數、品質標準與工序規範" />
 
+@if (isSuperAdmin() && !activeCompanyId()) {
+  <div class="tenant-warn">
+    ⚠ 請先在頂部 TENANT 下拉選單選擇租戶，才能進行查詢。
+  </div>
+}
+
 <div class="chat-wrap">
   <div class="messages" #msgBox>
     @for (msg of messages(); track msg.id) {
@@ -34,10 +40,13 @@
   </div>
 
   <div class="composer">
-    <textarea [(ngModel)]="inputText" rows="1" placeholder="詢問知識庫… (Enter 送出)"
+    <textarea [(ngModel)]="inputText" rows="1"
+              [placeholder]="isSuperAdmin() && !activeCompanyId() ? '請先選擇租戶…' : '詢問知識庫… (Enter 送出)'"
+              [disabled]="isSuperAdmin() && !activeCompanyId()"
               (keydown.enter)="onEnter($event)">
     </textarea>
-    <button class="btn primary sm" (click)="send()" [disabled]="!inputText.trim() || botTyping()">
+    <button class="btn primary sm" (click)="send()"
+            [disabled]="!inputText.trim() || botTyping() || (isSuperAdmin() && !activeCompanyId())">
       送出 ▸
     </button>
   </div>
