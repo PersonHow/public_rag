@@ -33,10 +33,14 @@ app = FastAPI(
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
 
+_cors_origins = ["*"] if settings.app_env == "development" else [
+    o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.app_env == "development" else ["https://your-domain.com"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -52,6 +56,7 @@ async def startup_event() -> None:
     Production 環境：初始化失敗直接 raise，讓 Cloud Run 拒絕啟動。
     """
     startup_logger = logging.getLogger("startup")
+    startup_logger.info(f"CORS_ORIGINS: {_cors_origins}")
     try:
         from app.services.ai.qdrant_service import init_collection
         init_collection()

@@ -47,7 +47,7 @@ from app.services.ai.gemini import (
     convert_to_chunks,
 )
 from app.services.document.parser import parse_docx
-from app.services.ai.qdrant_service import delete_chunks_by_ids, upsert_chunks
+from app.services.ai.qdrant_service import delete_chunks_by_ids, normalize_product_name_by_doc, upsert_chunks
 from app.services.rules import get_latest_rules, generate_rule_version
 
 router = APIRouter(prefix="/internal/tasks", tags=["internal"])
@@ -279,6 +279,16 @@ async def ingest_chunks(
         await db.flush()
         return {"status": "failed", "message": str(e)}
 
+    # ── 5.5 product_name 正規化（多數決，冪等）──────────────────────────────
+    total_fixed = 0
+    for did in doc_ids:
+        total_fixed += normalize_product_name_by_doc(str(did), company_id_str)
+    if total_fixed > 0:
+        logger.info(
+            "product_name 正規化完成",
+            extra={**log_extra, "total_fixed": total_fixed},
+        )
+
     # ── 6. 完成 ──────────────────────────────────────────────────────────
     session.status = "done"
     await db.flush()
@@ -404,6 +414,29 @@ async def inject_gcs_paths(
         "injected_count": injected_count,
         "total_chunks": len(chunks),
     }
+
+# 加在 tasks.py 最底部，用完可以刪
+
+@router.post("/normalize-product-names")
+async def normalize_all_product_names(
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(_verify_internal_token),
+) -> dict:
+    """一次性補正既有 Qdrant 資料的 product_name，跑完可移除此 endpoint。"""
+    from app.services.ai.qdrant_service import normalize_product_name_by_doc
+
+    docs_result = await db.execute(
+        select(Document.doc_id, Document.company_id).where(
+            Document.status == "converted"
+        )
+    )
+    rows = docs_result.all()
+
+    total_fixed = 0
+    for doc_id, company_id in rows:
+        total_fixed += normalize_product_name_by_doc(str(doc_id), str(company_id))
+
+    return {"status": "ok", "docs_checked": len(rows), "chunks_fixed": total_fixed}
 
 
 # ── 共用輔助函式 ──────────────────────────────────────────────────────────────

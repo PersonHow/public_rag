@@ -7,11 +7,13 @@ collection: "chunks"，768 維，Cosine distance
 多租戶隔離：所有查詢強制帶 company_id payload filter，不可省略。
 
 公開介面：
-  init_collection()  — 確保 collection 存在（冪等），FastAPI startup 呼叫
-  upsert_chunks()    — 批次寫入向量 + payload，每批 50 筆
-  search()           — Phase 5 語意搜尋，強制 company_id filter
+  init_collection()                — 確保 collection 存在（冪等），FastAPI startup 呼叫
+  upsert_chunks()                  — 批次寫入向量 + payload，每批 50 筆
+  search()                         — Phase 5 語意搜尋，強制 company_id filter
+  normalize_product_name_by_doc()  — Phase 5 v2：同一 doc 的 product_name 多數決正規化
 """
 
+from collections import Counter
 from typing import Any, Optional
 
 from qdrant_client import QdrantClient
@@ -171,6 +173,86 @@ def search(
         }
         for r in results
     ]
+
+
+def normalize_product_name_by_doc(doc_id: str, company_id: str) -> int:
+    """
+    同一 doc_id 的所有 chunks 做 product_name 多數決，
+    將少數名稱的 chunks 用 set_payload 覆寫為多數決名稱。
+
+    設計為冪等：重複執行結果相同，不影響已正規化的資料。
+
+    Args:
+        doc_id:     文件 UUID string
+        company_id: 公司 UUID string（多租戶隔離，必填）
+
+    Returns:
+        被修正的 chunk 數量（0 表示無需修正）
+    """
+    client = _get_client()
+
+    # ── 1. scroll 撈出該 doc_id 的所有 points ─────────────────────────────
+    all_points = []
+    offset = None
+
+    while True:
+        batch, next_offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(key="company_id", match=MatchValue(value=company_id)),
+                    FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
+                ]
+            ),
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        all_points.extend(batch)
+        if next_offset is None:
+            break
+        offset = next_offset
+
+    if not all_points:
+        return 0
+
+    # ── 2. 多數決 ─────────────────────────────────────────────────────────
+    names = [
+        p.payload.get("product_name")
+        for p in all_points
+        if p.payload.get("product_name")
+    ]
+    if not names:
+        return 0
+
+    majority_name = Counter(names).most_common(1)[0][0]
+
+    minority_ids = [
+        str(p.id)
+        for p in all_points
+        if p.payload.get("product_name") and p.payload["product_name"] != majority_name
+    ]
+
+    if not minority_ids:
+        return 0
+
+    # ── 3. 覆寫少數名稱（不需重新向量化，只改 payload）───────────────────
+    client.set_payload(
+        collection_name=COLLECTION_NAME,
+        payload={"product_name": majority_name},
+        points=minority_ids,
+    )
+
+    logger.info(
+        "product_name 正規化完成",
+        extra={
+            "doc_id": doc_id,
+            "majority_name": majority_name,
+            "fixed_count": len(minority_ids),
+        },
+    )
+    return len(minority_ids)
 
 
 def delete_chunks_by_ids(chunk_ids: list[str]) -> None:

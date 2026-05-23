@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
     QDRANT_COLLECTION_NAME: str = ""
 
+    # ── CORS ────────────────────────────────
+    # 逗號分隔字串，例如 "https://a.com,https://b.com" 或 "*"
+    CORS_ORIGINS: str = "*"
+
     @model_validator(mode="after")
     def _validate_required_in_production(self) -> "Settings":
         """Production 環境強制要求關鍵欄位不得為空，防止錯誤設定上線。"""

@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
+  apiUrl: 'https://public-rag-backend-pwq7hrcdaa-de.a.run.app',
 };

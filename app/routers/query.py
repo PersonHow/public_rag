@@ -28,55 +28,11 @@ from app.services.ai.embedding import embed_texts
 from app.services.ai.gemini import generate_answer
 from app.services.ai.qdrant_service import search
 from app.services.storage.gcs import generate_signed_url
+from app.prompts.query_prompt import SYSTEM_PROMPT, build_rag_prompt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
-
-# ── RAG System Prompt ─────────────────────────────────────────────────────────
-
-_SYSTEM_PROMPT = """\
-你是一位工業生產知識助理，擅長解讀加工參數、品質標準與工序規範。
-
-根據提供的知識片段，用條列式回答操作員的問題。
-
-回答格式規範：
-- 開頭使用【加工參數】、【品質標準】或其他適合的區塊標題
-- 每個要點以「- 」開頭
-- 技術數值保留原始單位
-# TODO v2：來源區塊改由前端用 sources 陣列渲染，不讓 Gemini 自行生成
-# - 結尾加上【來源】區塊，列出引用的文件與段落
-- 無法從知識片段回答的部分，明確說明「資料中未找到相關資訊」
-- 不要捏造任何數值或步驟\
-"""
-
-
-def _build_rag_prompt(question: str, chunks: list[dict]) -> str:
-    """組裝 RAG user prompt，chunks 來自 Qdrant payload。"""
-    context_parts: list[str] = []
-
-    for i, chunk in enumerate(chunks, 1):
-        p = chunk["payload"]
-        lines = [f"【知識片段 {i}（相關度 {chunk['score']:.2f}）】"]
-        if p.get("product_name"):
-            lines.append(f"產品：{p['product_name']}")
-        if p.get("product_id"):
-            lines.append(f"料號：{p['product_id']}")
-        if p.get("face"):
-            lines.append(f"加工面：{p['face']}")
-        if p.get("situation"):
-            lines.append(f"情境：{p['situation']}")
-        if p.get("action"):
-            lines.append(f"處理方式：{p['action']}")
-        if p.get("specs"):
-            lines.append(f"規格：{p['specs']}")
-        if p.get("reason"):
-            lines.append(f"說明：{p['reason']}")
-        lines.append(f"內容：{p.get('embed_text', '')}")
-        context_parts.append("\n".join(lines))
-
-    context = "\n\n".join(context_parts)
-    return f"以下是相關知識片段：\n\n{context}\n\n問題：{question}"
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
@@ -98,7 +54,6 @@ async def query_knowledge(
         effective_company_id = company_id
     else:
         effective_company_id = str(current_user.company_id)
-
 
     logger.info(
         f"查詢開始 question_length={len(req.question)} top_k={req.top_k}",
@@ -154,9 +109,9 @@ async def query_knowledge(
             doc_id_to_filename[str(doc_id)] = filename
 
     # ── 4. 組 RAG Prompt → Gemini Flash 生成 ─────────────────────────────
-    user_prompt = _build_rag_prompt(req.question, results)
+    user_prompt = build_rag_prompt(req.question, results, doc_id_to_filename)
     answer = await generate_answer(
-        system_prompt=_SYSTEM_PROMPT,
+        system_prompt=SYSTEM_PROMPT,
         user_prompt=user_prompt,
     )
 

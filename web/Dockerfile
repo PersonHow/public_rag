@@ -12,8 +12,11 @@ RUN npm run build -- --configuration=production
 # ── Stage 2: Serve ────────────────────────────────────────────────────────────
 FROM nginx:alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 COPY --from=builder /app/dist/web/browser /usr/share/nginx/html
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 8080
+
+CMD ["/bin/sh", "-c", \
+  "envsubst '$PORT' < /etc/nginx/conf.d/default.conf.template \
+   > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
