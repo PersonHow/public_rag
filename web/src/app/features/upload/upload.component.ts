@@ -6,11 +6,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StepperComponent } from '../../shared/components/stepper/stepper.component';
 import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
+import { ButtonComponent } from '../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [RouterLink, StepperComponent, PageHeadComponent],
+  imports: [RouterLink, StepperComponent, PageHeadComponent, ButtonComponent],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.scss',
 })
@@ -42,18 +43,22 @@ export class UploadComponent {
   }
 
   uploadFiles(files: FileList): void {
-    if (!this.auth.isAdmin()) {
-      this.toast.error('只有管理員可以上傳文件');
+  if (!this.auth.isAdmin()) {
+    this.toast.error('只有管理員可以上傳文件');
+    return;
+  }
+  if (this.auth.isSuperAdmin() && !this.uploadSvc.context.activeCompanyId()) {
+    this.toast.error('請先在上方選擇目標租戶');
+    return;
+  }
+  Array.from(files).forEach(f => {
+    if (f.size > 50 * 1024 * 1024) {
+      this.toast.error(`${f.name} 超過 50MB 限制`);
       return;
     }
-    Array.from(files).forEach(f => {
-      if (f.size > 50 * 1024 * 1024) {
-        this.toast.error(`${f.name} 超過 50MB 限制`);
-        return;
-      }
-      this.uploadSvc.upload(f);
-    });
-  }
+    this.uploadSvc.upload(f);
+  });
+}
 
   fileExt(name: string): string {
     const ext = name.split('.').pop()?.toLowerCase() ?? '';

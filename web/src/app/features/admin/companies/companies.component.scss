@@ -19,11 +19,3 @@
 }
 .form-panel__body { padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
 .form-panel__actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
-
-.btn-danger-sm {
-  font-size: 11px; padding: 3px 10px;
-  background: transparent; color: var(--rust);
-  border: 1px solid var(--rust); border-radius: 4px; cursor: pointer;
-  transition: background .15s;
-}
-.btn-danger-sm:hover { background: rgba(180,60,50,.08); }

@@ -3,8 +3,8 @@
   title="租戶管理"
   desc="所有公司／租戶（superadmin 專用）">
   <div actions style="display:flex;gap:8px">
-    <button class="btn" (click)="load()">↺ 重新整理</button>
-    <button class="btn primary" (click)="openForm()">＋ 新增租戶</button>
+    <app-button (click)="load()">↺ 重新整理</app-button>
+    <app-button variant="primary" (click)="openForm()">＋ 新增租戶</app-button>
   </div>
 </app-page-head>
 
@@ -13,7 +13,7 @@
   <div class="form-panel card">
     <div class="form-panel__head">
       <span class="px-mono" style="font-size:11px;letter-spacing:.1em">NEW COMPANY</span>
-      <button class="px-icon-btn" (click)="cancelForm()" title="關閉">✕</button>
+      <app-button variant="icon" (click)="cancelForm()" title="關閉">✕</app-button>
     </div>
 
     <div class="form-panel__body">
@@ -29,10 +29,10 @@
       </div>
 
       <div class="form-panel__actions">
-        <button class="btn" (click)="cancelForm()">取消</button>
-        <button class="btn primary" (click)="submit()" [disabled]="submitting() || !form.name.trim()">
+        <app-button (click)="cancelForm()">取消</app-button>
+        <app-button variant="primary" [disabled]="submitting() || !form.name.trim()" (click)="submit()">
           {{ submitting() ? '建立中…' : '建立租戶' }}
-        </button>
+        </app-button>
       </div>
     </div>
   </div>
@@ -72,7 +72,7 @@
             </td>
             <td>
               @if (c.is_active) {
-                <button class="btn btn-danger-sm" (click)="deactivate(c)">停用</button>
+                <app-button variant="danger" size="sm" (click)="deactivate(c)">停用</app-button>
               }
             </td>
           </tr>

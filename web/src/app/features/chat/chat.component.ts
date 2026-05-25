@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
+import { ButtonComponent } from '../../shared/components/button/button.component';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyContextService } from '../../core/services/company-context.service';
 
@@ -31,7 +32,7 @@ interface Message {
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, PageHeadComponent],
+  imports: [FormsModule, PageHeadComponent, ButtonComponent],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss',
 })

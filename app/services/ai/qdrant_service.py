@@ -46,7 +46,9 @@ UPSERT_BATCH_SIZE = 50
 def _get_client() -> QdrantClient:
     return QdrantClient(
         host=settings.QDRANT_HOST,
-        port=settings.QDRANT_PORT,
+        # port=settings.QDRANT_PORT,
+        grpc_port=settings.QDRANT_GRPC_PORT,  # 6334 gRPC
+        prefer_grpc=True,
         api_key=settings.QDRANT_API_KEY or None,
         timeout=30,
     )

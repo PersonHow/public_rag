@@ -9,11 +9,12 @@ import { PageHeadComponent } from '../../../shared/components/page-head/page-hea
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TruncateIdPipe } from '../../../shared/pipes/truncate-id.pipe';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-admin-sessions',
   standalone: true,
-  imports: [RouterLink, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe],
+  imports: [RouterLink, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe, ButtonComponent],
   templateUrl: './sessions.component.html',
   styleUrl: './sessions.component.scss',
 })

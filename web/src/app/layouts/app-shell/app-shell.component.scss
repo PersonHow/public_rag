@@ -125,25 +125,6 @@
   flex: 1;
 }
 
-.px-icon-btn {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--ink);
-  background: var(--bg-2);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
-  position: relative;
-
-  &:hover {
-    background: var(--cream);
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0 var(--ink);
-  }
-}
-
 .tb-me {
   display: flex;
   align-items: center;

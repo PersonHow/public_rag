@@ -30,5 +30,25 @@
 
   &.sm { padding: 5px 10px; font-size: 10px; }
 
+  &.danger {
+    background: transparent; color: var(--rust);
+    border-color: var(--rust); box-shadow: none;
+    &:hover { background: rgba(180,60,50,.08); border-color: var(--rust); }
+  }
+
   &:disabled, &[disabled] { opacity: .4; cursor: not-allowed; pointer-events: none; }
+}
+
+// Square icon-only button
+.icon-btn {
+  width: 34px; height: 34px;
+  border: 1px solid var(--ink); background: var(--bg-2);
+  display: grid; place-items: center;
+  cursor: pointer; color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s;
+
+  &:hover  { background: var(--cream); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  &:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+  &:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
 }

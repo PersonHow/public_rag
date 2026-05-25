@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     # ── Qdrant（Phase 4）────────────────────────────────
     QDRANT_HOST: str = ""
     QDRANT_PORT: int = 6333
+    QDRANT_GRPC_PORT: int = 6334
     QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
     QDRANT_COLLECTION_NAME: str = ""
 

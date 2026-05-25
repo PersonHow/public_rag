@@ -45,9 +45,9 @@
               [disabled]="isSuperAdmin() && !activeCompanyId()"
               (keydown.enter)="onEnter($event)">
     </textarea>
-    <button class="btn primary sm" (click)="send()"
-            [disabled]="!inputText.trim() || botTyping() || (isSuperAdmin() && !activeCompanyId())">
+    <app-button variant="primary" size="sm" (click)="send()"
+                [disabled]="!inputText.trim() || botTyping() || (isSuperAdmin() && !activeCompanyId())">
       送出 ▸
-    </button>
+    </app-button>
   </div>
 </div>

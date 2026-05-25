@@ -2,7 +2,7 @@
   stamp="ADMIN · SESSIONS"
   title="Session 管理"
   desc="所有上傳 Session 與狀態（需要管理員角色）">
-  <button actions class="btn" (click)="load()">↺ 重新整理</button>
+  <app-button actions (click)="load()">↺ 重新整理</app-button>
 </app-page-head>
 
 @if (loading() || (!loading() && sessions().length === 0 && !apiError())) {

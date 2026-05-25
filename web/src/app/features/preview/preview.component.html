@@ -130,10 +130,10 @@
           <span class="px-stamp">審視完畢？</span>
           <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
         </div>
-        <button class="btn ghost sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</button>
-        <button class="btn rust" [disabled]="actionLoading()" (click)="onConfirm()">
+        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</app-button>
+        <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirm()">
           {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
-        </button>
+        </app-button>
       </div>
     }
 

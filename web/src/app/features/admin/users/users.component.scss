@@ -26,12 +26,3 @@
 .form-panel__actions {
   display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;
 }
-
-/* ── Danger button variant ──────────────────────────── */
-.btn-danger-sm {
-  font-size: 11px; padding: 3px 10px;
-  background: transparent; color: var(--rust);
-  border: 1px solid var(--rust); border-radius: 4px; cursor: pointer;
-  transition: background .15s;
-}
-.btn-danger-sm:hover { background: rgba(var(--rust-rgb, 180,60,50),.08); }

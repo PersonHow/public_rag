@@ -13,6 +13,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ChunkCardComponent, ChunkGroup } from './components/chunk-card/chunk-card.component';
 import { FulltextViewComponent } from './components/fulltext-view/fulltext-view.component';
+import { ButtonComponent } from '../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-preview',
@@ -21,7 +22,7 @@ import { FulltextViewComponent } from './components/fulltext-view/fulltext-view.
     RouterLink, FormsModule, UpperCasePipe,
     StepperComponent, PageHeadComponent,
     StatusBadgeComponent, EmptyStateComponent,
-    ChunkCardComponent, FulltextViewComponent,
+    ChunkCardComponent, FulltextViewComponent, ButtonComponent,
   ],
   templateUrl: './preview.component.html',
   styleUrl:    './preview.component.scss',

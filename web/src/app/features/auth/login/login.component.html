@@ -55,9 +55,9 @@
           <span class="px-label">// PASSWORD</span>
           <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" required />
         </label>
-        <button class="btn rust px-btn" type="submit" [disabled]="loading()">
+        <app-button variant="rust" type="submit" [disabled]="loading()">
           {{ loading() ? '登入中…' : '[ 登入 ▸ ]' }}
-        </button>
+        </app-button>
       </form>
 
       <div class="px-rule"></div>
