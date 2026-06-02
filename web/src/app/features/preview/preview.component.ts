@@ -44,7 +44,9 @@ export class PreviewComponent implements OnInit, OnDestroy {
   readonly showViewTabs = computed(() => !!this.svc.selectedDocId());
 
   readonly isWorkerRunning = computed(() =>
-    this.status() === 'pending_preview' && this.svc.chunks().length === 0
+    this.status() === 'pending_preview' &&
+    this.svc.chunks().length === 0 &&
+    !this.svc.isCodeFileOnly()
   );
 
   // ── 卡片模式：分組（輪播狀態已移入 ChunkCardComponent）──

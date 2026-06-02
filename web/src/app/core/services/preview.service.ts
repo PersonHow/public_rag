@@ -42,8 +42,16 @@ export class PreviewService {
     this.documents().filter(d => d.has_low_confidence).length
   );
 
+  /** 是否全為不產生 chunks 的程式/圖檔類型（tap / nc / dxf / unknown） */
+  readonly isCodeFileOnly = computed(() => {
+    const docs = this.documents();
+    if (docs.length === 0) return false;
+    return docs.every(d => ['tap', 'nc', 'dxf', 'unknown'].includes(d.doc_type));
+  });
+
   readonly canConfirm = computed(() =>
-    this.session()?.status === 'pending_preview' && this.chunks().length > 0
+    this.session()?.status === 'pending_preview' &&
+    (this.chunks().length > 0 || this.isCodeFileOnly())
   );
 
   readonly filteredChunks = computed(() => {
