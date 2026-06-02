@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,7 +30,12 @@ class IngestionSession(Base):
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    company_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.company_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     status: Mapped[str] = mapped_column(
         Enum(*SESSION_STATUSES, name="session_status_enum"),
         nullable=False,

@@ -1,7 +1,7 @@
 """
 app/routers/upload.py
 
-POST /upload — 接收 multipart/form-data，上傳至 GCS，建立 DB 記錄，派送 Cloud Tasks。
+POST /upload — 接收 multipart/form-data，上傳至 GCS，建立 DB 記錄，以 BackgroundTask 處理文件。
 
 Phase 2 接縫：
   - company_id 從 JWT token 取（require_company_id dependency）
@@ -12,19 +12,18 @@ import asyncio
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.database import get_db
+from app.core.database import get_db, get_session_factory
 from app.core.logging import get_logger
 from app.core.dependencies import require_roles, require_company_id
 from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import UploadResponse
 from app.schemas.auth import CurrentUser
-from app.services.storage import gcs as gcs_service
-from app.services.storage import tasks as tasks_service
 from app.services.document.detector import detect_doc_type_from_filename
 
 router = APIRouter(tags=["upload"])
@@ -39,6 +38,7 @@ _upload_allowed = require_roles("superadmin", "company_admin")
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     file: Annotated[UploadFile, File(description="上傳文件（PDF / DOCX / TAP / NC / DXF）")],
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(_upload_allowed),
     company_id: uuid.UUID = Depends(require_company_id),
@@ -51,7 +51,7 @@ async def upload_document(
     2. 上傳至 GCS raw/{company_id}/{session_id}/{doc_id}/{filename}
     3. 建立 ingestion_sessions 記錄
     4. 建立 documents 記錄（含 gcs_raw_path）
-    5. 派送 Cloud Tasks（最大重試 3 次）
+    5. 以 FastAPI BackgroundTask 在同一 container 內異步處理文件
     6. 回傳 { session_id, doc_id, status }
     """
     company_id_str = str(company_id)
@@ -99,22 +99,9 @@ async def upload_document(
     db.add(document)
     await db.flush()
 
-    try:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: tasks_service.enqueue_process_document(
-                session_id=session_id,
-                doc_id=doc_id,
-                doc_type=doc_type,
-                company_id=company_id_str,  # tasks service 介面維持 str
-            ),
-        )
-    except Exception as e:
-        logger.error(
-            f"Cloud Tasks 派送失敗（可手動觸發）: {e}",
-            extra={"session_id": str(session_id), "doc_id": str(doc_id)},
-        )
+    await _enqueue_with_fallback(
+        str(session_id), str(doc_id), doc_type, company_id_str, background_tasks,
+    )
 
     logger.info(
         "文件上傳完成",
@@ -135,6 +122,136 @@ async def upload_document(
         doc_type=doc_type,
         gcs_raw_path=gcs_path,
     )
+
+
+async def _enqueue_with_fallback(
+    session_id_str: str,
+    doc_id_str: str,
+    doc_type: str,
+    company_id_str: str,
+    background_tasks: BackgroundTasks,
+    max_retries: int = 3,
+) -> None:
+    """
+    先嘗試 Cloud Tasks 最多 max_retries 次；全部失敗才改用 BackgroundTask。
+    enqueue_process_document 是同步 blocking call，用 run_in_executor 包裝。
+    """
+    from app.services.storage.tasks import enqueue_process_document
+
+    session_id = uuid.UUID(session_id_str)
+    doc_id = uuid.UUID(doc_id_str)
+    loop = asyncio.get_event_loop()
+    log_extra = {"session_id": session_id_str, "doc_id": doc_id_str}
+
+    logger.info(
+        "Cloud Tasks 排程開始",
+        extra={
+            **log_extra,
+            "doc_type":     doc_type,
+            "company_id":   company_id_str,
+            "queue":        settings.CLOUD_TASKS_QUEUE,
+            "worker_url":   f"{settings.WORKER_BASE_URL}/internal/tasks/process-document",
+            "max_retries":  max_retries,
+        },
+    )
+
+    last_error: Exception | None = None
+    for attempt in range(1, max_retries + 1):
+        logger.info(
+            f"Cloud Tasks 嘗試中（第 {attempt}/{max_retries} 次）",
+            extra={
+                **log_extra,
+                "attempt":    attempt,
+                "doc_type":   doc_type,
+                "company_id": company_id_str,
+            },
+        )
+        try:
+            task_name = await loop.run_in_executor(
+                None,
+                lambda: enqueue_process_document(session_id, doc_id, doc_type, company_id_str),
+            )
+            logger.info(
+                f"Cloud Tasks 排程成功（第 {attempt}/{max_retries} 次）",
+                extra={**log_extra, "task_name": task_name},
+            )
+            return
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"Cloud Tasks 排程失敗（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}",
+                extra={**log_extra, "attempt": attempt, "error": str(e)},
+            )
+            if attempt < max_retries:
+                await asyncio.sleep(0.5)
+
+    logger.error(
+        f"Cloud Tasks {max_retries} 次全部失敗，改用 BackgroundTask",
+        extra={**log_extra, "final_error": str(last_error)},
+    )
+    background_tasks.add_task(
+        _process_document_background,
+        session_id_str, doc_id_str, doc_type, company_id_str,
+    )
+
+
+async def _process_document_background(
+    session_id_str: str,
+    doc_id_str: str,
+    doc_type: str,
+    company_id_str: str,
+) -> None:
+    """BackgroundTask fallback：Cloud Tasks 未設定或失敗時，在同一 container 內處理文件。"""
+    from app.routers.internal.tasks import (
+        _build_company_context,
+        _route_document,
+        _mark_session_failed,
+    )
+    from app.services.ai.gemini import GeminiMaxRetriesError
+
+    session_id = uuid.UUID(session_id_str)
+    doc_id = uuid.UUID(doc_id_str)
+    log_extra = {"session_id": session_id_str, "doc_id": doc_id_str, "via": "background_task"}
+
+    async with get_session_factory()() as db:
+        try:
+            session_result = await db.execute(
+                select(IngestionSession).where(IngestionSession.session_id == session_id)
+            )
+            session = session_result.scalar_one_or_none()
+            doc_result = await db.execute(
+                select(Document).where(Document.doc_id == doc_id)
+            )
+            document = doc_result.scalar_one_or_none()
+
+            if not session or not document:
+                logger.error("BackgroundTask: session/document 不存在", extra=log_extra)
+                return
+
+            company_context = await _build_company_context(db, session.company_id)
+            await _route_document(session, document, doc_type, company_context, db, log_extra)
+            await db.commit()
+
+        except GeminiMaxRetriesError as e:
+            await db.rollback()
+            async with get_session_factory()() as db2:
+                s2 = (await db2.execute(
+                    select(IngestionSession).where(IngestionSession.session_id == session_id)
+                )).scalar_one_or_none()
+                if s2:
+                    await _mark_session_failed(s2, db2, reason=str(e), log_extra=log_extra)
+                    await db2.commit()
+
+        except Exception as e:
+            logger.error(f"BackgroundTask 未預期錯誤: {e}", extra=log_extra)
+            await db.rollback()
+            async with get_session_factory()() as db2:
+                s2 = (await db2.execute(
+                    select(IngestionSession).where(IngestionSession.session_id == session_id)
+                )).scalar_one_or_none()
+                if s2:
+                    await _mark_session_failed(s2, db2, reason=f"background_task: {e}", log_extra=log_extra)
+                    await db2.commit()
 
 
 def _upload_sync(gcs_path: str, data: bytes, content_type: str) -> None:
