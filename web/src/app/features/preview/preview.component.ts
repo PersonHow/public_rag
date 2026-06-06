@@ -49,6 +49,11 @@ export class PreviewComponent implements OnInit, OnDestroy {
     !this.svc.isCodeFileOnly()
   );
 
+  /** v2：只有 pending_preview + admin 才允許 inline 編輯 chunk。 */
+  readonly canEditChunks = computed(() =>
+    this.status() === 'pending_preview' && this.isAdmin()
+  );
+
   // ── 卡片模式：分組（輪播狀態已移入 ChunkCardComponent）──
   readonly groupedChunks = computed((): ChunkGroup[] => {
     const map = new Map<string, ChunkGroup>();

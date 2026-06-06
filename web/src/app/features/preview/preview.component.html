@@ -93,7 +93,10 @@
       <div class="card-wrap">
         <div class="card-list">
           @for (group of groupedChunks(); track group.productName) {
-            <app-chunk-card [group]="group" />
+            <app-chunk-card
+              [group]="group"
+              [sessionId]="sessionId"
+              [editable]="canEditChunks()" />
           }
           @if (groupedChunks().length === 0) {
             <app-empty-state message="無符合條件的 chunks" />
@@ -115,7 +118,10 @@
       }
 
       @if (!svc.fullTextLoading() && svc.fullText(); as ft) {
-        <app-fulltext-view [fullText]="ft" />
+        <app-fulltext-view
+          [fullText]="ft"
+          [sessionId]="sessionId"
+          [editable]="canEditChunks()" />
       }
 
       @if (!svc.fullTextLoading() && !svc.fullText()) {

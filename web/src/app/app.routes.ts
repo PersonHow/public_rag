@@ -33,11 +33,13 @@ export const routes: Routes = [
       },
       {
         path: 'upload',
+        canMatch: [superadminGuard],
         loadComponent: () =>
           import('./features/upload/upload.component').then(m => m.UploadComponent),
       },
       {
         path: 'preview/:sessionId',
+        canMatch: [superadminGuard],
         loadComponent: () =>
           import('./features/preview/preview.component').then(m => m.PreviewComponent),
       },
@@ -48,7 +50,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin/sessions',
-        canMatch: [adminGuard],
+        canMatch: [superadminGuard],
         loadComponent: () =>
           import('./features/admin/sessions/sessions.component').then(m => m.AdminSessionsComponent),
       },

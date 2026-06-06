@@ -98,3 +98,66 @@
 .ftv-divider {
   border: none; border-top: 1px solid var(--line-2); margin: 4px 20px 0;
 }
+
+// ── v2 inline 編輯 ───────────────────────────────────────
+.ftv-editable {
+  cursor: text; border-radius: 2px;
+  transition: background .1s;
+  &:hover { background: rgba(64, 224, 208, .08); }
+}
+
+.ftv-empty-pl, .ftv-empty-pl-text {
+  color: var(--muted); font-style: italic;
+}
+
+.ftv-item--editing {
+  background: rgba(64, 224, 208, .04);
+  border-radius: 4px; padding: 2px 0;
+}
+
+.ftv-input {
+  font-family: inherit; color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--teal);
+  padding: 4px 8px; outline: none; box-sizing: border-box;
+  &:focus { background: #fff; }
+  &:disabled { opacity: .5; cursor: progress; }
+}
+
+.ftv-input--field {
+  font-size: 15px; line-height: 1.6;
+  width: 100%; min-height: 48px; resize: vertical;
+}
+
+.ftv-input--inline {
+  font-size: 13px;
+  min-width: 140px;
+}
+
+// ── 歸類列 ────────────────────────────────────────────────
+.ftv-classify {
+  margin: 6px 0 0;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 4px 0;
+  border-top: 1px dashed var(--line);
+}
+
+.ftv-classify-label {
+  font-weight: 700; letter-spacing: .1em; opacity: .75;
+}
+
+.ftv-classify-value {
+  color: var(--ink); font-family: var(--font-mono); font-size: 12px;
+}
+
+.ftv-classify-caret {
+  font-size: 10px; opacity: .55;
+}
+
+.ftv-saving-indicator {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); letter-spacing: .08em;
+  padding: 4px 20px 8px; text-align: right;
+}

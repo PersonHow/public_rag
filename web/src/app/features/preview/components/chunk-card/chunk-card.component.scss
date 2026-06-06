@@ -104,3 +104,71 @@
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   color: var(--ink); letter-spacing: .06em; min-width: 40px; text-align: center;
 }
+
+// ── v2 inline 編輯：可編輯狀態提示與輸入框 ─────────────────
+.gc-editable {
+  cursor: text;
+  position: relative;
+  &:hover { background: rgba(64, 224, 208, .08); }
+}
+
+// 在 header（深色背景）下的可編輯反白要更淡一點
+.gc-head .gc-editable:hover { background: rgba(255, 255, 255, .08); }
+
+.gc-tag--placeholder {
+  font-style: italic; opacity: .55;
+  border-style: dashed;
+}
+
+.gc--editing {
+  // 編輯中的卡片給個微微強化的外框
+  box-shadow: 3px 3px 0 var(--teal);
+}
+
+.gc-input {
+  font-family: inherit; color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--teal);
+  padding: 3px 8px; outline: none;
+  box-sizing: border-box;
+  &:focus { background: #fff; }
+  &:disabled { opacity: .5; cursor: progress; }
+}
+
+.gc-input--head {
+  // product_name 在深色 header 上
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  letter-spacing: .04em;
+  min-width: 200px;
+}
+
+.gc-input--tag {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 1px 7px; min-width: 80px; width: auto;
+}
+
+.gc-input--field {
+  font-size: 13px; line-height: 1.7;
+  width: 100%; min-height: 60px; resize: vertical;
+  flex: 1;
+}
+
+.gc-input--embed {
+  display: block; width: 100%;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+  padding: 10px 16px; margin: 0;
+  background: var(--bg-3);
+  min-height: 120px; resize: vertical;
+  border-left: none; border-right: none;
+}
+
+.gc-field--editing {
+  background: rgba(64, 224, 208, .06);
+  margin: 0 -8px; padding: 4px 8px;
+}
+
+.gc-saving {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); text-align: right;
+  padding: 4px 0; letter-spacing: .08em;
+}

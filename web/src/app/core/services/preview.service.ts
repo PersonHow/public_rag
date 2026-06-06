@@ -4,7 +4,7 @@ import { firstValueFrom, interval, switchMap, takeWhile } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   SessionStatusResponse, SessionChunksResponse,
-  Document, Chunk, ConfirmResponse, FullTextResponse
+  Document, Chunk, ChunkPatch, ConfirmResponse, FullTextResponse
 } from '../../shared/models';
 
 @Injectable({ providedIn: 'root' })
@@ -145,6 +145,30 @@ export class PreviewService {
         await this.tryLoadChunks(sessionId);
       }
     });
+  }
+
+  // ── v2：預覽階段 inline 編輯單一 chunk ─────────────────
+  async patchChunk(sessionId: string, chunkId: string, patch: ChunkPatch): Promise<Chunk> {
+    const updated = await firstValueFrom(
+      this.http.patch<Chunk>(
+        `${environment.apiUrl}/sessions/${sessionId}/chunks/${chunkId}`,
+        patch
+      )
+    );
+    this.chunks.update(arr =>
+      arr.map(c => c.chunk_id === chunkId ? { ...c, ...updated } : c)
+    );
+    // 同步整體預覽快取，讓 fulltext-view 重新分組
+    // Chunk / FullTextChunk 的 optionality 不同（null vs undefined），用 unknown 轉接
+    this.fullText.update(ft => ft ? {
+      ...ft,
+      chunks: ft.chunks.map(c =>
+        c.chunk_id === chunkId
+          ? ({ ...c, ...updated } as unknown as typeof c)
+          : c
+      ),
+    } : ft);
+    return updated;
   }
 
   async confirm(sessionId: string): Promise<ConfirmResponse> {

@@ -1,11 +1,53 @@
-<div class="gc">
+<div class="gc" [class.gc--editing]="editingField()">
 
   <!-- Header：產品名 + tags + 筆數 -->
   <div class="gc-head">
     <div class="gc-head-left">
-      <span class="gc-product">{{ group.productName }}</span>
-      @if (group.material)   { <span class="gc-tag">{{ group.material }}</span> }
-      @if (group.dimensions) { <span class="gc-tag">{{ group.dimensions }}</span> }
+
+      <!-- product_name -->
+      @if (editingField() === 'product_name') {
+        <input class="gc-input gc-input--head" type="text"
+               [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+               (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
+               [disabled]="saving()" autofocus />
+      } @else {
+        <span class="gc-product"
+              [class.gc-editable]="editable"
+              (click)="beginEdit('product_name')">
+          {{ active.product_name || '（未指定產品）' }}
+        </span>
+      }
+
+      <!-- material -->
+      @if (editingField() === 'material') {
+        <input class="gc-input gc-input--tag" type="text" placeholder="材質"
+               [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+               (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
+               [disabled]="saving()" autofocus />
+      } @else if (active.material) {
+        <span class="gc-tag"
+              [class.gc-editable]="editable"
+              (click)="beginEdit('material')">{{ active.material }}</span>
+      } @else if (editable) {
+        <span class="gc-tag gc-tag--placeholder gc-editable"
+              (click)="beginEdit('material')">+ 材質</span>
+      }
+
+      <!-- dimensions -->
+      @if (editingField() === 'dimensions') {
+        <input class="gc-input gc-input--tag" type="text" placeholder="尺寸"
+               [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+               (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
+               [disabled]="saving()" autofocus />
+      } @else if (active.dimensions) {
+        <span class="gc-tag"
+              [class.gc-editable]="editable"
+              (click)="beginEdit('dimensions')">{{ active.dimensions }}</span>
+      } @else if (editable) {
+        <span class="gc-tag gc-tag--placeholder gc-editable"
+              (click)="beginEdit('dimensions')">+ 尺寸</span>
+      }
+
     </div>
     <div class="gc-head-right">
       <span class="gc-count-badge">{{ group.chunks.length }} 筆</span>
@@ -19,31 +61,80 @@
     <div class="gc-chunk-id">{{ active.chunk_id | slice:0:8 }}…</div>
 
     <div class="gc-fields">
-      @if (active.situation) {
-        <div class="gc-field">
+
+      <!-- situation -->
+      @if (editingField() === 'situation') {
+        <div class="gc-field gc-field--editing">
           <span class="gc-field-label">狀況</span>
-          <span class="gc-field-value">{{ active.situation }}</span>
+          <textarea class="gc-input gc-input--field" rows="3"
+                    [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                    (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
+                    [disabled]="saving()" autofocus></textarea>
+        </div>
+      } @else if (active.situation || editable) {
+        <div class="gc-field"
+             [class.gc-editable]="editable"
+             (click)="beginEdit('situation')">
+          <span class="gc-field-label">狀況</span>
+          <span class="gc-field-value"
+                [class.gc-field-value--empty]="!active.situation">
+            {{ active.situation || '（點擊新增）' }}
+          </span>
         </div>
       }
-      @if (active.action) {
-        <div class="gc-field">
+
+      <!-- action -->
+      @if (editingField() === 'action') {
+        <div class="gc-field gc-field--editing">
           <span class="gc-field-label">動作</span>
-          <span class="gc-field-value">{{ active.action }}</span>
+          <textarea class="gc-input gc-input--field" rows="3"
+                    [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                    (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
+                    [disabled]="saving()" autofocus></textarea>
+        </div>
+      } @else if (active.action || editable) {
+        <div class="gc-field"
+             [class.gc-editable]="editable"
+             (click)="beginEdit('action')">
+          <span class="gc-field-label">動作</span>
+          <span class="gc-field-value"
+                [class.gc-field-value--empty]="!active.action">
+            {{ active.action || '（點擊新增）' }}
+          </span>
         </div>
       }
-      @if (active.reason) {
-        <div class="gc-field">
+
+      <!-- reason -->
+      @if (editingField() === 'reason') {
+        <div class="gc-field gc-field--editing">
           <span class="gc-field-label">原因</span>
-          <span class="gc-field-value">{{ active.reason }}</span>
+          <textarea class="gc-input gc-input--field" rows="3"
+                    [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                    (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
+                    [disabled]="saving()" autofocus></textarea>
+        </div>
+      } @else if (active.reason || editable) {
+        <div class="gc-field"
+             [class.gc-editable]="editable"
+             (click)="beginEdit('reason')">
+          <span class="gc-field-label">原因</span>
+          <span class="gc-field-value"
+                [class.gc-field-value--empty]="!active.reason">
+            {{ active.reason || '（點擊新增）' }}
+          </span>
         </div>
       }
+
+      <!-- applies_to：唯讀（v2 不開放編輯） -->
       @if (active.applies_to) {
         <div class="gc-field">
           <span class="gc-field-label">適用</span>
           <span class="gc-field-value">{{ active.applies_to }}</span>
         </div>
       }
-      @if (!active.situation && !active.action && !active.reason && !active.applies_to) {
+
+      <!-- 完全沒結構欄位 + 不可編輯 → 顯示空狀態 -->
+      @if (!editable && !active.situation && !active.action && !active.reason && !active.applies_to) {
         <div class="gc-field">
           <span class="gc-field-value gc-field-value--empty">（無結構欄位）</span>
         </div>
@@ -57,9 +148,24 @@
         <span class="gc-embed-arrow">{{ embedExpanded() ? '▴' : '▾' }}</span>
       </button>
       @if (embedExpanded()) {
-        <div class="gc-embed-text">{{ active.embed_text }}</div>
+        @if (editingField() === 'embed_text') {
+          <textarea class="gc-input gc-input--embed" rows="6"
+                    [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                    (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
+                    [disabled]="saving()" autofocus></textarea>
+        } @else {
+          <div class="gc-embed-text"
+               [class.gc-editable]="editable"
+               (click)="beginEdit('embed_text')">
+            {{ active.embed_text }}
+          </div>
+        }
       }
     </div>
+
+    @if (saving()) {
+      <div class="gc-saving">儲存中…</div>
+    }
 
   </div>
 

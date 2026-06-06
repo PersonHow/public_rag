@@ -27,12 +27,13 @@ from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import ConfirmResponse, SessionStatusResponse
 from app.schemas.auth import CurrentUser
+from app.schemas.chunk import ChunkPatch
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 settings = get_settings()
 logger = get_logger("sessions")
 
-_confirm_allowed = require_roles("superadmin", "company_admin")
+_confirm_allowed = require_roles("superadmin")
 
 
 async def _get_session_or_404(session_id: uuid.UUID, db: AsyncSession) -> IngestionSession:
@@ -49,6 +50,7 @@ async def _get_session_or_404(session_id: uuid.UUID, db: AsyncSession) -> Ingest
 async def get_session_status(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> SessionStatusResponse:
     session = await _get_session_or_404(session_id, db)
     return SessionStatusResponse(
@@ -63,6 +65,7 @@ async def get_session_status(
 async def get_session_chunks(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> dict[str, Any]:
     session = await _get_session_or_404(session_id, db)
 
@@ -93,6 +96,68 @@ async def get_session_chunks(
         "chunks": [_chunk_to_dict(c) for c in chunks],
         "chunk_count": len(chunks),
     }
+
+
+@router.patch("/{session_id}/chunks/{chunk_id}")
+async def patch_session_chunk(
+    session_id: uuid.UUID,
+    chunk_id: uuid.UUID,
+    body: ChunkPatch,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
+) -> dict[str, Any]:
+    """
+    v2 預覽階段修正 chunk 欄位。
+
+    僅在 session.status == pending_preview 開放（其他狀態 409）。此階段 Qdrant 尚未
+    有任何向量，故不需重新 embed、不需碰 Qdrant —— 純粹更新 PostgreSQL chunks 列。
+
+    權限（v2 變更）：
+      - 僅 superadmin（company_admin / field_user 皆 403，已由 require_roles 擋）
+    """
+    session = await _get_session_or_404(session_id, db)
+
+    if session.status != "pending_preview":
+        raise HTTPException(
+            status_code=409,
+            detail=f"僅能在預覽階段編輯 chunk（目前狀態：{session.status}）",
+        )
+
+    chunk_result = await db.execute(select(Chunk).where(Chunk.chunk_id == chunk_id))
+    chunk = chunk_result.scalar_one_or_none()
+    if not chunk:
+        raise HTTPException(status_code=404, detail=f"Chunk {chunk_id} 不存在")
+
+    doc_session_result = await db.execute(
+        select(Document.session_id).where(Document.doc_id == chunk.doc_id)
+    )
+    if doc_session_result.scalar_one_or_none() != session_id:
+        raise HTTPException(status_code=404, detail=f"Chunk {chunk_id} 不屬於此 session")
+
+    if current_user.role != "superadmin" and chunk.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="無權編輯其他公司的 chunk")
+
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        return _chunk_to_dict(chunk)
+
+    for field_name, new_value in updates.items():
+        setattr(chunk, field_name, new_value)
+
+    await db.flush()
+
+    logger.info(
+        "Chunk 預覽編輯",
+        extra={
+            "session_id": str(session_id),
+            "chunk_id": str(chunk_id),
+            "edited_by": str(current_user.user_id),
+            "company_id": str(current_user.company_id) if current_user.company_id else None,
+            "fields": list(updates.keys()),
+        },
+    )
+
+    return _chunk_to_dict(chunk)
 
 
 @router.post("/{session_id}/confirm", response_model=ConfirmResponse)
@@ -169,16 +234,13 @@ async def reject_session(
 @router.get("", response_model=list[SessionStatusResponse])
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("superadmin", "company_admin")),
+    current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> list[SessionStatusResponse]:
     """
-    Phase 5 變更：管理員查看所有 session 列表。
-    - company_admin → 只能看自家公司
-    - superadmin    → 看所有公司（可搭配 ?company_id= query param）
+    Sessions 列表（v2：僅 superadmin）。
+    - 可搭配 ?company_id= query param 過濾單一租戶
     """
     query = select(IngestionSession)
-    if current_user.role != "superadmin":
-        query = query.where(IngestionSession.company_id == current_user.company_id)
     result = await db.execute(query.order_by(IngestionSession.created_at.desc()).limit(100))
     sessions = result.scalars().all()
     return [

@@ -3,10 +3,9 @@ app/routers/upload.py
 
 POST /upload — 接收 multipart/form-data，上傳至 GCS，建立 DB 記錄，以 BackgroundTask 處理文件。
 
-Phase 2 接縫：
-  - company_id 從 JWT token 取（require_company_id dependency）
-  - 需要 company_admin 或 superadmin 角色（field_user 無法上傳）
-  - superadmin 可帶 ?company_id=XXX 指定目標公司
+權限（v2 變更）：
+  - 僅 superadmin 可上傳（company_admin / field_user 皆 403）
+  - superadmin 須帶 ?company_id=XXX 指定目標公司
 """
 import asyncio
 import uuid
@@ -32,7 +31,7 @@ logger = get_logger("upload")
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
-_upload_allowed = require_roles("superadmin", "company_admin")
+_upload_allowed = require_roles("superadmin")
 
 
 @router.post("/upload", response_model=UploadResponse)

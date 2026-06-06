@@ -60,3 +60,60 @@ class GeminiChunkValidationError(BaseModel):
     product_name: Optional[str]
     embed_text: Optional[str]
     error: str
+
+
+class ChunkPatch(BaseModel):
+    """PATCH /sessions/{session_id}/chunks/{chunk_id} 的 request body。
+
+    所有欄位 Optional，僅 model_dump(exclude_unset=True) 更新有給的欄位。
+    禁止編輯 chunk_id / doc_id / company_id / rule_version / chunk_index /
+    code_gcs_path / drawing_gcs_path / created_at —— extra=forbid 在 422 擋掉。
+    embed_text / doc_type 給定時不可為空；其他文字欄位空字串視為 None（清空）。
+    """
+
+    product_name: Optional[str] = None
+    product_id: Optional[str] = None
+    material: Optional[str] = None
+    dimensions: Optional[str] = None
+    specs: Optional[str] = None
+    situation: Optional[str] = None
+    action: Optional[str] = None
+    reason: Optional[str] = None
+    applies_to: Optional[str] = None
+    case_id: Optional[str] = None
+    doc_type: Optional[str] = None
+    face: Optional[str] = None
+    embed_text: Optional[str] = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("embed_text")
+    @classmethod
+    def _embed_text_not_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("embed_text 不能為空字串")
+        return stripped
+
+    @field_validator("doc_type")
+    @classmethod
+    def _doc_type_not_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("doc_type 不能為空字串")
+        return stripped.lower()
+
+    @field_validator(
+        "product_name", "product_id", "material", "dimensions", "specs",
+        "situation", "action", "reason", "applies_to", "case_id", "face",
+    )
+    @classmethod
+    def _empty_to_none(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        stripped = v.strip()
+        return stripped if stripped else None

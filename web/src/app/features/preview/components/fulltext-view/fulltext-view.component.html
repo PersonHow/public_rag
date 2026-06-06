@@ -6,7 +6,7 @@
 
       <div class="ftv-section">
 
-        <!-- 產品節標題列 -->
+        <!-- 產品節標題列（v2 唯讀；要改產品名請點下方條目的「歸類」） -->
         <div class="ftv-section-head">
           <h3 class="ftv-section-name">{{ section.productName }}</h3>
           @if (section.productId) {
@@ -37,28 +37,105 @@
         <!-- 條列清單 -->
         <ol class="ftv-list">
           @for (item of section.items; track item.chunk_id; let idx = $index) {
-            <li class="ftv-item">
+            <li class="ftv-item"
+                [class.ftv-item--editing]="editingChunkId() === item.chunk_id">
 
               <span class="ftv-item-num">{{ idx + 1 }}.</span>
 
               <div class="ftv-item-body">
-                @if (item.situation) {
-                  <p class="ftv-situation">{{ item.situation }}</p>
-                }
-                <!-- 只保留原因（紅色），動作與適用不顯示 -->
-                @if (item.reason) {
-                  <p class="ftv-reason">
-                    <span class="ftv-reason-label">原因</span>{{ item.reason }}
+
+                <!-- situation -->
+                @if (isEditing(item.chunk_id, 'situation')) {
+                  <textarea class="ftv-input ftv-input--field" rows="2"
+                            [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                            (blur)="saveEdit(item.situation)"
+                            (keydown)="onTextareaKeydown($event, item.situation)"
+                            [disabled]="saving()" autofocus></textarea>
+                } @else if (item.situation || editable) {
+                  <p class="ftv-situation"
+                     [class.ftv-editable]="editable"
+                     [class.ftv-empty-pl]="!item.situation"
+                     (click)="beginEdit(item, 'situation')">
+                    {{ item.situation || '（點擊新增狀況）' }}
                   </p>
                 }
-                @if(item.action){
-                  <p class="ftv-action">
-                    <span class="ftv-action-label">動作</span>{{ item.action }}
+
+                <!-- reason -->
+                @if (isEditing(item.chunk_id, 'reason')) {
+                  <p class="ftv-reason ftv-reason--editing">
+                    <span class="ftv-reason-label">原因</span>
+                    <textarea class="ftv-input ftv-input--field" rows="2"
+                              [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                              (blur)="saveEdit(item.reason)"
+                              (keydown)="onTextareaKeydown($event, item.reason)"
+                              [disabled]="saving()" autofocus></textarea>
+                  </p>
+                } @else if (item.reason || editable) {
+                  <p class="ftv-reason"
+                     [class.ftv-editable]="editable"
+                     (click)="beginEdit(item, 'reason')">
+                    <span class="ftv-reason-label">原因</span>
+                    @if (item.reason) {
+                      {{ item.reason }}
+                    } @else {
+                      <span class="ftv-empty-pl-text">（點擊新增）</span>
+                    }
                   </p>
                 }
-                @if (!item.situation && !item.reason) {
+
+                <!-- action -->
+                @if (isEditing(item.chunk_id, 'action')) {
+                  <p class="ftv-action ftv-action--editing">
+                    <span class="ftv-action-label">動作</span>
+                    <textarea class="ftv-input ftv-input--field" rows="2"
+                              [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                              (blur)="saveEdit(item.action)"
+                              (keydown)="onTextareaKeydown($event, item.action)"
+                              [disabled]="saving()" autofocus></textarea>
+                  </p>
+                } @else if (item.action || editable) {
+                  <p class="ftv-action"
+                     [class.ftv-editable]="editable"
+                     (click)="beginEdit(item, 'action')">
+                    <span class="ftv-action-label">動作</span>
+                    @if (item.action) {
+                      {{ item.action }}
+                    } @else {
+                      <span class="ftv-empty-pl-text">（點擊新增）</span>
+                    }
+                  </p>
+                }
+
+                <!-- 無語意 + 唯讀 → 空狀態 -->
+                @if (!editable && !item.situation && !item.reason && !item.action) {
                   <p class="ftv-empty">（無語意內容）</p>
                 }
+
+                <!-- 歸類（產品名）：每條 chunk 自己的 product_name；editable 才顯示 -->
+                @if (editable) {
+                  @if (isEditing(item.chunk_id, 'product_name')) {
+                    <p class="ftv-classify ftv-classify--editing">
+                      <span class="ftv-classify-label">歸類</span>
+                      <input class="ftv-input ftv-input--inline" type="text"
+                             list="ftv-known-products"
+                             [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
+                             (blur)="saveEdit(item.product_name)"
+                             (keydown)="onInputKeydown($event, item.product_name)"
+                             [disabled]="saving()" autofocus />
+                    </p>
+                  } @else {
+                    <p class="ftv-classify ftv-editable"
+                       (click)="beginEdit(item, 'product_name')">
+                      <span class="ftv-classify-label">歸類</span>
+                      <span class="ftv-classify-value"
+                            [class.ftv-empty-pl-text]="!item.product_name">
+                        {{ item.product_name || '（未指定，點擊指派）' }}
+                      </span>
+                      <span class="ftv-classify-caret">▾</span>
+                    </p>
+                  }
+                }
+
               </div>
 
             </li>
@@ -73,5 +150,18 @@
       }
     }
   </div>
+
+  @if (saving()) {
+    <div class="ftv-saving-indicator">儲存中…</div>
+  }
+
+  <!-- 「歸類」input 的自動完成清單；放最後一次即可，全域共用 -->
+  @if (editable) {
+    <datalist id="ftv-known-products">
+      @for (n of knownProductNames; track n) {
+        <option [value]="n"></option>
+      }
+    </datalist>
+  }
 
 </div>
