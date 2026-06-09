@@ -10,6 +10,7 @@ POST /query — 現場查詢 RAG（Phase 5）
 company_id 永遠從 JWT token 取。
 Qdrant company_id filter 強制帶入（多租戶隔離）。
 """
+import asyncio
 import logging
 import time
 from uuid import UUID
@@ -70,10 +71,15 @@ async def query_knowledge(
     query_vector = vectors[0]
 
     # ── 2. Qdrant 語意搜尋（強制 company_id filter）────────────────────────
-    results = search(
-        query_vector=query_vector,
-        company_id=effective_company_id,
-        top_k=req.top_k,
+    # search() 是同步 blocking 呼叫（QdrantClient），用 run_in_executor 包裝避免卡住 event loop
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None,
+        lambda: search(
+            query_vector=query_vector,
+            company_id=effective_company_id,
+            top_k=req.top_k,
+        ),
     )
 
     if not results:
@@ -100,9 +106,16 @@ async def query_knowledge(
         if r["payload"].get("doc_id")
     })
     doc_id_to_filename: dict[str, str] = {}
-    if doc_ids:
+    # 過濾掉格式異常的 doc_id（避免單一壞 payload 讓整個查詢 500）
+    valid_doc_uuids = []
+    for d in doc_ids:
+        try:
+            valid_doc_uuids.append(UUID(d))
+        except (ValueError, TypeError):
+            logger.warning(f"Qdrant payload 含無效 doc_id，已跳過: {d}")
+    if valid_doc_uuids:
         stmt = select(Document.doc_id, Document.filename).where(
-            Document.doc_id.in_([UUID(d) for d in doc_ids])
+            Document.doc_id.in_(valid_doc_uuids)
         )
         rows = await db.execute(stmt)
         for doc_id, filename in rows:

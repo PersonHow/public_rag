@@ -12,9 +12,9 @@ Phase 5 變更：
 """
 import asyncio
 import uuid
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -179,6 +179,10 @@ async def confirm_session(
     session.preview_confirmed = True
     await db.flush()
 
+    # 先 commit 再派發 Cloud Tasks：避免 ingest worker 在本交易 commit 前讀到舊的
+    # pending_preview 狀態 → 回 "skipped" → 向量化靜默不執行
+    await db.commit()
+
     logger.info(
         "Mirror View 確認",
         extra={
@@ -235,12 +239,15 @@ async def reject_session(
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(_confirm_allowed),
+    company_id: Optional[uuid.UUID] = Query(default=None),
 ) -> list[SessionStatusResponse]:
     """
     Sessions 列表（v2：僅 superadmin）。
-    - 可搭配 ?company_id= query param 過濾單一租戶
+    - 可搭配 ?company_id= query param 過濾單一租戶（superadmin 切換公司時前端會自動帶入）
     """
     query = select(IngestionSession)
+    if company_id is not None:
+        query = query.where(IngestionSession.company_id == company_id)
     result = await db.execute(query.order_by(IngestionSession.created_at.desc()).limit(100))
     sessions = result.scalars().all()
     return [

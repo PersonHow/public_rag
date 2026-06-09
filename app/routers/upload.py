@@ -98,6 +98,10 @@ async def upload_document(
     db.add(document)
     await db.flush()
 
+    # 先 commit 再派發 Cloud Tasks：避免 worker 在本交易 commit 前就查不到 session/document
+    # （worker 找不到 row 會回 200 → Cloud Tasks 不重試 → 文件靜默遺失）
+    await db.commit()
+
     await _enqueue_with_fallback(
         str(session_id), str(doc_id), doc_type, company_id_str, background_tasks,
     )

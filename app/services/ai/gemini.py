@@ -89,8 +89,14 @@ class TokenManager:
             )
 
             if needs_refresh:
-                request = google.auth.transport.requests.Request()
-                self._credentials.refresh(request)
+                # credentials.refresh() 是同步 blocking 網路呼叫，用 run_in_executor 避免卡住 event loop
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    None,
+                    lambda: self._credentials.refresh(
+                        google.auth.transport.requests.Request()
+                    ),
+                )
 
             return self._credentials.token
 

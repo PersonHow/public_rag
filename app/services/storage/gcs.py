@@ -51,9 +51,11 @@ async def download_bytes(gcs_path: str, timeout_sec: int = 30) -> bytes:
     blob = bucket.blob(gcs_path)
     loop = asyncio.get_running_loop()
     try:
+        # 把 timeout 一併傳給底層 HTTP 請求：asyncio.wait_for 只會取消 await，
+        # 真正在背景跑的 worker thread 不會被中斷；交給 GCS client 自行逾時才會真正放掉連線。
         return await asyncio.wait_for(
-            loop.run_in_executor(None, blob.download_as_bytes),
-            timeout=timeout_sec,
+            loop.run_in_executor(None, lambda: blob.download_as_bytes(timeout=timeout_sec)),
+            timeout=timeout_sec + 5,
         )
     except asyncio.TimeoutError:
         raise TimeoutError(f"GCS 下載逾時（{timeout_sec}s）: {gcs_path}")

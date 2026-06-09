@@ -21,6 +21,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchAny,
     MatchValue,
     PayloadSchemaType,
     PointStruct,
@@ -272,18 +273,20 @@ def delete_chunks_by_ids(chunk_ids: list[str]) -> None:
     logger.info(f"Qdrant rollback 刪除完成", extra={"deleted_count": len(chunk_ids)})
 
 
-def count_by_session(session_id: str, company_id: str) -> int:
+def count_by_session(company_id: str, doc_ids: list[str] | None = None) -> int:
     """
-    驗證用：計算 Qdrant 中某 session 的向量數量（透過 doc_id 聚合）。
-    實際上 Qdrant 沒有 session_id payload，透過 company_id + doc_id 集合比對。
+    驗證用：計算 Qdrant 中向量數量。
+    Qdrant payload 沒有 session_id，故需以 company_id（必帶）+ doc_id 集合比對。
+    傳入該 session 的 doc_ids 才能得到 per-session 計數；省略時退化為整間公司計數。
     Phase 4 debug endpoint 用。
     """
     client = _get_client()
+    must: list = [FieldCondition(key="company_id", match=MatchValue(value=company_id))]
+    if doc_ids:
+        must.append(FieldCondition(key="doc_id", match=MatchAny(any=list(doc_ids))))
     result = client.count(
         collection_name=COLLECTION_NAME,
-        count_filter=Filter(
-            must=[FieldCondition(key="company_id", match=MatchValue(value=company_id))]
-        ),
+        count_filter=Filter(must=must),
         exact=True,
     )
     return result.count

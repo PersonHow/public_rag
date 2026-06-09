@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, interval, switchMap, takeWhile } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   SessionStatusResponse, SessionChunksResponse,
@@ -91,6 +91,24 @@ export class PreviewService {
     await this.tryLoadChunks(sessionId);
   }
 
+  /**
+   * 靜默刷新（輪詢用）：不翻轉 loading 旗標，避免整頁 spinner 每次輪詢都閃爍。
+   * 失敗時靜默忽略，不覆蓋既有畫面。
+   */
+  async refreshSilent(sessionId: string): Promise<void> {
+    try {
+      const status = await firstValueFrom(
+        this.http.get<SessionStatusResponse>(
+          `${environment.apiUrl}/sessions/${sessionId}`
+        )
+      );
+      this.session.set(status);
+    } catch {
+      return;
+    }
+    await this.tryLoadChunks(sessionId);
+  }
+
   // ── 嘗試撈 chunks ────────────────────────────────────
   async tryLoadChunks(sessionId: string): Promise<void> {
     try {
@@ -125,26 +143,6 @@ export class PreviewService {
     } finally {
       this.fullTextLoading.set(false);
     }
-  }
-
-  // ── Polling ──────────────────────────────────────────
-  startPolling(sessionId: string) {
-    return interval(3000).pipe(
-      switchMap(() =>
-        this.http.get<SessionStatusResponse>(
-          `${environment.apiUrl}/sessions/${sessionId}`
-        )
-      ),
-      takeWhile(
-        s => s.status === 'pending_preview' && this.chunks().length === 0,
-        true
-      ),
-    ).subscribe(async s => {
-      this.session.set(s);
-      if (this.chunks().length === 0 && s.status === 'pending_preview') {
-        await this.tryLoadChunks(sessionId);
-      }
-    });
   }
 
   // ── v2：預覽階段 inline 編輯單一 chunk ─────────────────

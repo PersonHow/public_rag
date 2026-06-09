@@ -129,19 +129,24 @@
       }
     }
 
-    <!-- ── Confirm bar ── -->
-    @if (svc.canConfirm() && isAdmin()) {
-      <div class="confirm-bar">
-        <div class="info">
-          <span class="px-stamp">審視完畢？</span>
-          <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
-        </div>
-        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</app-button>
-        <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirm()">
-          {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
-        </app-button>
-      </div>
-    }
+  }
 
+  <!-- ── 純程式檔（tap/nc/dxf/unknown）無 chunks 時的提示 ── -->
+  @if (svc.isCodeFileOnly() && status() === 'pending_preview') {
+    <app-empty-state message="此 Session 僅含程式／圖檔（不產生 chunks），可直接確認歸屬。" />
+  }
+
+  <!-- ── Confirm bar（移到 chunks 區塊外，純程式檔也能確認）── -->
+  @if (svc.canConfirm() && isAdmin()) {
+    <div class="confirm-bar">
+      <div class="info">
+        <span class="px-stamp">審視完畢？</span>
+        <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
+      </div>
+      <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</app-button>
+      <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirm()">
+        {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
+      </app-button>
+    </div>
   }
 }

@@ -21,12 +21,13 @@ Phase 4 變更：
 Phase 5 變更：
   -新增 chunk_index（enumerate 保留文件內順序）。
 """
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -75,6 +76,16 @@ def _get_face_suffix(face: str) -> str:
     return result or ""
 
 
+def _product_id_in_filename(pid: str, filename: str) -> bool:
+    """
+    以 token 邊界比對 product_id，避免子字串誤判導致注入錯誤的 TAP 檔。
+    例：pid 'A034-189010-1' 不應命中 'A034-189010-10' / 'A034-189010-11' 的檔名。
+    product token 由英數字與連字號組成，故 pid 前後須為字串頭尾或其他（非 token）字元。
+    """
+    pattern = r"(?<![A-Za-z0-9-])" + re.escape(pid) + r"(?![A-Za-z0-9-])"
+    return re.search(pattern, filename) is not None
+
+
 # ── Request / Response Schemas ────────────────────────────────────────────────
 
 class ProcessDocumentRequest(BaseModel):
@@ -120,8 +131,9 @@ async def process_document(
     )
     session = session_result.scalar_one_or_none()
     if not session:
-        logger.error("Session 不存在", extra=log_extra)
-        return {"status": "error", "message": "Session 不存在"}
+        # 可能是上游交易尚未對本 worker 連線可見（replica lag）→ 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Session 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Session 尚不可見，稍後重試")
 
     if session.status == "failed":
         logger.info("Session 已是 failed，停止 Cloud Tasks 重試", extra=log_extra)
@@ -133,8 +145,9 @@ async def process_document(
     )
     document = doc_result.scalar_one_or_none()
     if not document:
-        logger.error("Document 不存在", extra=log_extra)
-        return {"status": "error", "message": "Document 不存在"}
+        # 同上：交易可見性延遲 → 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Document 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Document 尚不可見，稍後重試")
 
     # ── 3. 取 company + latest rules（Phase 3 新增）──────────────────────
     company_context = await _build_company_context(db, session.company_id)
@@ -190,8 +203,9 @@ async def ingest_chunks(
     )
     session = session_result.scalar_one_or_none()
     if not session:
-        logger.error("Session 不存在", extra=log_extra)
-        return {"status": "error", "message": "Session 不存在"}
+        # 交易可見性延遲 → 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Session 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Session 尚不可見，稍後重試")
 
     company_id_str = str(session.company_id)
     log_extra["company_id"] = company_id_str
@@ -373,9 +387,9 @@ async def inject_gcs_paths(
 
         matched_doc: Optional[Document] = None
 
-        # 精準比對：product_id in filename + face suffix
+        # 精準比對：product_id（token 邊界）+ face suffix
         for filename, docs in tap_map.items():
-            if pid not in filename:
+            if not _product_id_in_filename(pid, filename):
                 continue
             if target_suffix and target_suffix in filename:
                 matched_doc = docs[0]  # 已按 created_at desc 排序，取最新
@@ -414,30 +428,6 @@ async def inject_gcs_paths(
         "injected_count": injected_count,
         "total_chunks": len(chunks),
     }
-
-# 加在 tasks.py 最底部，用完可以刪
-
-@router.post("/normalize-product-names")
-async def normalize_all_product_names(
-    db: AsyncSession = Depends(get_db),
-    _: None = Depends(_verify_internal_token),
-) -> dict:
-    """一次性補正既有 Qdrant 資料的 product_name，跑完可移除此 endpoint。"""
-    from app.services.ai.qdrant_service import normalize_product_name_by_doc
-
-    docs_result = await db.execute(
-        select(Document.doc_id, Document.company_id).where(
-            Document.status == "converted"
-        )
-    )
-    rows = docs_result.all()
-
-    total_fixed = 0
-    for doc_id, company_id in rows:
-        total_fixed += normalize_product_name_by_doc(str(doc_id), str(company_id))
-
-    return {"status": "ok", "docs_checked": len(rows), "chunks_fixed": total_fixed}
-
 
 # ── 共用輔助函式 ──────────────────────────────────────────────────────────────
 
@@ -614,6 +604,10 @@ async def _save_chunks_to_db(
     # rule_version 從 company_context 取（Phase 3 核心接縫點）
     rule_version = company_context["rule_version"]
     session.rule_version_used = rule_version
+
+    # 冪等保護：Cloud Tasks 重試會重跑整個 task，先刪掉此 doc 既有 chunks 再寫，避免重複 INSERT
+    await db.execute(delete(Chunk).where(Chunk.doc_id == document.doc_id))
+    await db.flush()
 
     for idx, chunk_output in enumerate(chunk_outputs):
         chunk = Chunk(

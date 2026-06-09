@@ -12,7 +12,6 @@ export const companyContextInterceptor: HttpInterceptorFn = (req, next) => {
   const companyId      = context.activeCompanyId();
   const targetsOurApi  = req.url.startsWith(environment.apiUrl);
 
-  console.log('[interceptor]', req.url, { isSuperAdmin, companyId, targetsOurApi });
   if (isSuperAdmin && companyId && targetsOurApi) {
     const updated = req.clone({
       params: req.params.set('company_id', companyId),

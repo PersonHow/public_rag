@@ -41,12 +41,14 @@ async def get_current_user(
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
-    company_id_raw = payload.get("company_id")
+    # role 與 company_id 一律取 DB 即時值，而非 JWT 簽發時的快照：
+    # 使用者被改公司／改角色／停用後，舊 token 到期前不會再存取到舊資料。
+    # （此處本就已查 DB，故不增加額外查詢成本。）
     return CurrentUser(
         user_id=user.user_id,
         email=user.email,
         role=user.role,
-        company_id=uuid.UUID(company_id_raw) if company_id_raw else None,
+        company_id=user.company_id,
     )
 
 

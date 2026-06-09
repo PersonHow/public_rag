@@ -106,7 +106,8 @@ export class PreviewComponent implements OnInit, OnDestroy {
     this._pollSub = new Subscription();
     const poll = setInterval(() => {
       if (this.isWorkerRunning()) {
-        this.svc.loadSession(this.sessionId);
+        // 靜默刷新，避免每 5 秒翻轉 loading 造成整頁 spinner 閃爍
+        this.svc.refreshSilent(this.sessionId);
       } else {
         clearInterval(poll);
       }
