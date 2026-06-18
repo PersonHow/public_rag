@@ -58,16 +58,10 @@
 </div>
 
 <div class="hub-tips">
-  <div class="hub-tip">
-    <span class="px-stamp">TIP / 01</span>
-    <p>每個功能在 Header 都有對應的 tab，可以隨時切換而不會中斷目前的編輯。</p>
-  </div>
-  <div class="hub-tip">
-    <span class="px-stamp">TIP / 02</span>
-    <p>「三步驟流程」可以暫停、之後從預覽頁繼續，未確認的文件不會進入向量庫。</p>
-  </div>
-  <div class="hub-tip">
-    <span class="px-stamp">TIP / 03</span>
-    <p>所有對話都記錄在稽核中，並能追溯到引用的原文段落（Phase 3 開放）。</p>
-  </div>
+  @for (tip of tips(); track $index) {
+    <div class="hub-tip">
+      <span class="px-stamp">TIP / 0{{ $index + 1 }}</span>
+      <p>{{ tip }}</p>
+    </div>
+  }
 </div>

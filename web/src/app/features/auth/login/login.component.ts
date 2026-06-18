@@ -31,10 +31,21 @@ export class LoginComponent {
       this.toast.success(`歡迎回來！`);
       this.router.navigate(['/hub']);
     } catch (err: any) {
-      const msg = err?.error?.detail ?? '帳號或密碼錯誤';
+      const msg = this._errorMessage(err?.status);
       this.errorMsg.set(msg);
+      this.toast.error(msg);
+      this.password = '';
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private _errorMessage(status?: number): string {
+    switch (status) {
+      case 401: return '帳號或密碼錯誤';
+      case 403: return '此帳號已被停用，請聯絡管理員';
+      case 0:   return '無法連線到伺服器，請稍後再試';
+      default:  return status && status >= 500 ? '伺服器錯誤，請稍後再試' : '登入失敗，請稍後再試';
     }
   }
 }

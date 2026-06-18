@@ -101,6 +101,20 @@ export class HubComponent implements OnInit {
     return base;
   });
 
+  // ── Tips（依角色顯示；編號在 template 用 $index 連續重排）──────────────
+  // 三步驟流程僅 superadmin 可進入，故該條提示只對 superadmin 顯示，
+  // 避免 company_admin / field_user 看到無法使用的功能說明。
+  readonly tips = computed(() => {
+    const list: string[] = [
+      '每個功能在 Header 都有對應的 tab，可以隨時切換而不會中斷目前的編輯。',
+    ];
+    if (this.isSuperAdmin()) {
+      list.push('「三步驟流程」可以暫停、之後從預覽頁繼續，未確認的文件不會進入向量庫。');
+    }
+    list.push('所有對話都記錄在稽核中，並能追溯到引用的原文段落（Phase 3 開放）。');
+    return list;
+  });
+
   // ── Lifecycle ──────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.loadStats();

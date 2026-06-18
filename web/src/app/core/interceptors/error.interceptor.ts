@@ -8,8 +8,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
   const auth  = inject(AuthService);
 
+  const isLoginRequest = req.url.endsWith('/auth/login');
+
   return next(req).pipe(
     catchError(err => {
+      if (isLoginRequest) {
+        return throwError(() => err);
+      }
       if (err.status === 401) {
         auth.logout();
         toast.error('登入已過期，請重新登入');
