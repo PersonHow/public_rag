@@ -8,11 +8,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
   const auth  = inject(AuthService);
 
-  const isLoginRequest = req.url.endsWith('/auth/login');
+  // 登入／登出端點的錯誤交給呼叫端自行處理，避免在這裡誤觸「登入已過期」或自動登出迴圈。
+  const isAuthEndpoint = req.url.endsWith('/auth/login') || req.url.endsWith('/auth/logout');
 
   return next(req).pipe(
     catchError(err => {
-      if (isLoginRequest) {
+      if (isAuthEndpoint) {
         return throwError(() => err);
       }
       if (err.status === 401) {

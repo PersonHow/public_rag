@@ -235,6 +235,74 @@ async def reject_session(
     )
 
 
+@router.post("/{session_id}/reprocess", response_model=ConfirmResponse)
+async def reprocess_session(
+    session_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(_confirm_allowed),
+) -> ConfirmResponse:
+    """
+    用「當前 prompt」從 GCS 重跑 process-document，重新生成 embed_text。
+
+    不需重新上傳（原始檔已在 GCS）。完成後 session 回到 pending_preview，
+    需經 Mirror View 重新 confirm 才會向量化；舊向量在 ingest-chunks 的
+    「先清後寫」整組替換，不殘留孤兒。
+
+    用途：修改 _EMBED_TEXT_RULES 等 prompt 後，讓既有文件套用新規則。
+    僅 superadmin。
+    """
+    session = await _get_session_or_404(session_id, db)
+
+    # 進行中的狀態不可重跑，避免干擾正在執行的向量化
+    if session.status in ("confirmed", "processing"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"目前狀態 {session.status} 處理中，不可重跑",
+        )
+
+    docs_result = await db.execute(
+        select(Document).where(Document.session_id == session_id)
+    )
+    documents = docs_result.scalars().all()
+    if not documents:
+        raise HTTPException(status_code=400, detail="此 session 沒有任何 document，無法重跑")
+
+    company_id_str = str(session.company_id)
+
+    # process-document 開頭會跳過 failed，且需回到預覽狀態 → 先重置
+    session.status = "pending_preview"
+    session.fail_reason = None
+    session.preview_confirmed = False
+    await db.flush()
+    # 先 commit 再派發，避免 worker 在本交易 commit 前讀到舊狀態
+    await db.commit()
+
+    logger.info(
+        "Session 重新處理派送",
+        extra={
+            "session_id": str(session_id),
+            "reprocessed_by": str(current_user.user_id),
+            "company_id": company_id_str,
+            "doc_count": len(documents),
+        },
+    )
+
+    # 逐 document 派送 process-document（複用 upload 的 Cloud Tasks + fallback 邏輯）
+    from app.routers.upload import _enqueue_with_fallback
+
+    for d in documents:
+        await _enqueue_with_fallback(
+            str(session_id), str(d.doc_id), d.doc_type, company_id_str, background_tasks,
+        )
+
+    return ConfirmResponse(
+        session_id=session_id,
+        status="pending_preview",
+        message="重新處理任務已派送，請至 Mirror View 重新預覽後再 confirm",
+    )
+
+
 @router.get("", response_model=list[SessionStatusResponse])
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
@@ -320,6 +388,7 @@ async def _ingest_chunks_background(session_id: uuid.UUID) -> None:
     """BackgroundTask fallback：Cloud Tasks 無法派送時，在同一 container 內執行向量化。"""
     from app.services.ai.embedding import embed_texts
     from app.services.ai.qdrant_service import (
+        delete_chunks_by_doc_ids,
         delete_chunks_by_ids,
         normalize_product_name_by_doc,
         upsert_chunks,
@@ -411,6 +480,8 @@ async def _ingest_chunks_background(session_id: uuid.UUID) -> None:
                 for i, c in enumerate(chunks)
             ]
 
+            # 先清後寫：先刪該 doc 既有向量，再寫新向量（與 ingest-chunks worker 一致）
+            delete_chunks_by_doc_ids([str(did) for did in doc_ids], company_id_str)
             try:
                 upsert_chunks(points)
             except Exception as e:

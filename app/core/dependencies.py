@@ -10,7 +10,7 @@ FastAPI dependency：
 import uuid
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -20,14 +20,23 @@ from app.models.user import User
 from app.schemas.auth import CurrentUser
 from app.services.auth import decode_token
 
-bearer_scheme = HTTPBearer()
+# auto_error=False：缺 Authorization header 時回傳 None 而非直接 403，
+# 讓我們能 fallback 到 httpOnly cookie。
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request = None,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
-    token = credentials.credentials
+    # 優先用 httpOnly cookie（瀏覽器），其次 Authorization: Bearer（非瀏覽器用戶端／測試）。
+    token = request.cookies.get("access_token") if request is not None else None
+    if not token and credentials is not None:
+        token = credentials.credentials
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")

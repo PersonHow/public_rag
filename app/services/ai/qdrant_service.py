@@ -273,6 +273,32 @@ def delete_chunks_by_ids(chunk_ids: list[str]) -> None:
     logger.info(f"Qdrant rollback 刪除完成", extra={"deleted_count": len(chunk_ids)})
 
 
+def delete_chunks_by_doc_ids(doc_ids: list[str], company_id: str) -> None:
+    """
+    按 doc_id 批次刪除該公司的所有向量（payload filter）。
+
+    重灌前清舊向量用：chunk_id 每次 process-document 都重生成，舊向量靠 chunk_id
+    蓋不掉，必須用 doc_id filter 整組清掉，否則殘留成孤兒污染搜尋。
+    強制帶 company_id（多租戶隔離，不可省略）。
+    """
+    if not doc_ids:
+        return
+    client = _get_client()
+    client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=Filter(
+            must=[
+                FieldCondition(key="company_id", match=MatchValue(value=company_id)),
+                FieldCondition(key="doc_id", match=MatchAny(any=list(doc_ids))),
+            ]
+        ),
+    )
+    logger.info(
+        "Qdrant 按 doc_id 批次刪除完成",
+        extra={"doc_count": len(doc_ids), "company_id": company_id},
+    )
+
+
 def count_by_session(company_id: str, doc_ids: list[str] | None = None) -> int:
     """
     驗證用：計算 Qdrant 中向量數量。

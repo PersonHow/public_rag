@@ -1,6 +1,6 @@
 import { Component, inject, computed, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -121,15 +121,13 @@ export class HubComponent implements OnInit {
   }
 
   private loadStats(): void {
-    const token = this.auth.token();
-    if (!token) {
+    if (!this.auth.isLoggedIn()) {
       this.statsLoading.set(false);
       return;
     }
 
-    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     this.http
-      .get<DashboardStats>(`${environment.apiUrl}/dashboard/stats`, { headers })
+      .get<DashboardStats>(`${environment.apiUrl}/dashboard/stats`)
       .subscribe({
         next: (data) => {
           this.stats.set(data);

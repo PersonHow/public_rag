@@ -3,22 +3,20 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, TokenResponse, CurrentUser } from '../../shared/models';
+import { LoginRequest, LoginResponse, CurrentUser } from '../../shared/models';
 
-const TOKEN_KEY = 'plm_token';
-const USER_KEY  = 'plm_user';
+const USER_KEY = 'plm_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http   = inject(HttpClient);
   private readonly router = inject(Router);
 
-  private readonly _token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
-  private readonly _user  = signal<CurrentUser | null>(this._loadUser());
+  // access_token 改放 httpOnly cookie，JS 不再持有；此處只保留非敏感的身分資訊供 UI 使用。
+  private readonly _user = signal<CurrentUser | null>(this._loadUser());
 
-  readonly token        = this._token.asReadonly();
   readonly currentUser  = this._user.asReadonly();
-  readonly isLoggedIn   = computed(() => !!this._token());
+  readonly isLoggedIn   = computed(() => !!this._user());
   readonly isAdmin      = computed(() => {
     const r = this._user()?.role;
     return r === 'superadmin' || r === 'company_admin';
@@ -28,7 +26,7 @@ export class AuthService {
   async login(email: string, password: string): Promise<void> {
     const body: LoginRequest = { email, password };
     const res = await firstValueFrom(
-      this.http.post<TokenResponse>(`${environment.apiUrl}/auth/login`, body)
+      this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body)
     );
     const user: CurrentUser = {
       email,
@@ -36,16 +34,17 @@ export class AuthService {
       company_id: res.company_id,
       company_name: res.company_name,
     };
-    this._token.set(res.access_token);
     this._user.set(user);
-    localStorage.setItem(TOKEN_KEY, res.access_token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
-  logout(): void {
-    this._token.set(null);
+  async logout(): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${environment.apiUrl}/auth/logout`, {}));
+    } catch {
+      // 後端清 cookie 失敗也要清掉前端狀態，避免卡在已登出但畫面仍顯示登入。
+    }
     this._user.set(null);
-    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this.router.navigate(['/login']);
   }

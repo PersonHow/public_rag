@@ -18,5 +18,5 @@ COPY --from=builder /app/dist/web/browser /usr/share/nginx/html
 EXPOSE 8080
 
 CMD ["/bin/sh", "-c", \
-  "envsubst '$PORT' < /etc/nginx/conf.d/default.conf.template \
+  "envsubst '$PORT $BACKEND_HOST' < /etc/nginx/conf.d/default.conf.template \
    > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

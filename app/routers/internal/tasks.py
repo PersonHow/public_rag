@@ -48,7 +48,12 @@ from app.services.ai.gemini import (
     convert_to_chunks,
 )
 from app.services.document.parser import parse_docx
-from app.services.ai.qdrant_service import delete_chunks_by_ids, normalize_product_name_by_doc, upsert_chunks
+from app.services.ai.qdrant_service import (
+    delete_chunks_by_doc_ids,
+    delete_chunks_by_ids,
+    normalize_product_name_by_doc,
+    upsert_chunks,
+)
 from app.services.rules import get_latest_rules, generate_rule_version
 
 router = APIRouter(prefix="/internal/tasks", tags=["internal"])
@@ -280,7 +285,10 @@ async def ingest_chunks(
         for i, c in enumerate(chunks)
     ]
 
-    # ── 5. Upsert Qdrant（失敗時回滾已寫入的向量）────────────────────────
+    # ── 5. Upsert Qdrant（先清後寫：先刪該 doc 既有向量，再寫新向量）──────
+    # chunk_id 每次 process-document 重生成，舊向量靠新 chunk_id 蓋不掉，
+    # 必須先按 doc_id 整組清掉，否則重灌會殘留孤兒。先清後寫使向量化全冪等。
+    delete_chunks_by_doc_ids([str(did) for did in doc_ids], company_id_str)
     try:
         upsert_chunks(points)
     except Exception as e:
