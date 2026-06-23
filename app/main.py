@@ -18,6 +18,7 @@ from app.core.logging import setup_logging
 from app.routers import health, sessions, upload
 from app.routers import auth, rules                             # Phase 2 / Phase 3
 from app.routers import query, preview, stats                          # Phase 5
+from app.routers import conversations                                   # Phase 6
 from app.routers.internal import tasks
 from app.routers.admin import companies, users, internal_setup  # Phase 2
 
@@ -87,6 +88,9 @@ app.include_router(rules.router)
 app.include_router(query.router)
 app.include_router(preview.router)
 app.include_router(stats.router)
+
+# Phase 6
+app.include_router(conversations.router)
 
 @app.get("/")
 async def root() -> dict:

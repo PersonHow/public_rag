@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.models.conversation import ConversationHistory
 from app.models.document import Document
 from app.schemas.auth import CurrentUser
 from app.schemas.query import QueryRequest, QueryResponse, SourceItem
@@ -34,6 +35,55 @@ from app.prompts.query_prompt import SYSTEM_PROMPT, build_rag_prompt
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _save_history(
+    db: AsyncSession,
+    *,
+    company_id: str,
+    user_id: UUID,
+    question: str,
+    answer: str,
+    sources: list["SourceItem"],
+    top_k: int,
+    elapsed_ms: int,
+) -> None:
+    """寫入查詢歷史（best-effort，失敗不影響查詢回應）。
+
+    sources 只存結構性欄位；code_download_url 是 1 小時過期的 signed URL，不存。
+    """
+    try:
+        db.add(
+            ConversationHistory(
+                company_id=UUID(company_id),
+                user_id=user_id,
+                question=question,
+                answer=answer,
+                sources=[
+                    {
+                        "doc_filename": s.doc_filename,
+                        "chunk_context": s.chunk_context,
+                        "score": s.score,
+                    }
+                    for s in sources
+                ],
+                top_k=top_k,
+                elapsed_ms=elapsed_ms,
+            )
+        )
+        await db.flush()
+    except Exception as e:
+        logger.warning(
+            f"查詢歷史寫入失敗（已略過）: {e}",
+            extra={
+                "phase": "phase6",
+                "service": "query",
+                "company_id": company_id,
+                "session_id": None,
+            },
+        )
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
@@ -93,8 +143,19 @@ async def query_knowledge(
                 "session_id": None,
             },
         )
+        no_result_answer = "資料庫中未找到與此問題相關的知識，請確認問題描述或聯繫管理員補充資料。"
+        await _save_history(
+            db,
+            company_id=effective_company_id,
+            user_id=current_user.user_id,
+            question=req.question,
+            answer=no_result_answer,
+            sources=[],
+            top_k=req.top_k,
+            elapsed_ms=elapsed,
+        )
         return QueryResponse(
-            answer="資料庫中未找到與此問題相關的知識，請確認問題描述或聯繫管理員補充資料。",
+            answer=no_result_answer,
             sources=[],
             elapsed_ms=elapsed,
         )
@@ -187,5 +248,16 @@ async def query_knowledge(
                 "session_id": None,
             },
         )
+
+    await _save_history(
+        db,
+        company_id=effective_company_id,
+        user_id=current_user.user_id,
+        question=req.question,
+        answer=answer,
+        sources=sources,
+        top_k=req.top_k,
+        elapsed_ms=elapsed,
+    )
 
     return QueryResponse(answer=answer, sources=sources, elapsed_ms=elapsed)
