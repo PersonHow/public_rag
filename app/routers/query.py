@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.models.chunk import Chunk
 from app.models.conversation import ConversationHistory
 from app.models.document import Document
 from app.schemas.auth import CurrentUser
@@ -182,6 +183,28 @@ async def query_knowledge(
         for doc_id, filename in rows:
             doc_id_to_filename[str(doc_id)] = filename
 
+    # ── 3.5 批次查 code_gcs_path（Qdrant payload 未帶，需回 Chunk 表取）──
+    # inject-gcs-paths 只寫進 Chunk 表、未同步 Qdrant，故下載連結需在此補查。
+    chunk_uuids = []
+    for r in results:
+        cid = r["payload"].get("chunk_id")
+        if not cid:
+            continue
+        try:
+            chunk_uuids.append(UUID(cid))
+        except (ValueError, TypeError):
+            logger.warning(f"Qdrant payload 含無效 chunk_id，已跳過: {cid}")
+    chunk_id_to_code_path: dict[str, str] = {}
+    if chunk_uuids:
+        code_rows = await db.execute(
+            select(Chunk.chunk_id, Chunk.code_gcs_path).where(
+                Chunk.chunk_id.in_(chunk_uuids),
+                Chunk.code_gcs_path.isnot(None),
+            )
+        )
+        for chunk_id, code_path in code_rows:
+            chunk_id_to_code_path[str(chunk_id)] = code_path
+
     # ── 4. 組 RAG Prompt → Gemini Flash 生成 ─────────────────────────────
     user_prompt = build_rag_prompt(req.question, results, doc_id_to_filename)
     answer = await generate_answer(
@@ -201,14 +224,17 @@ async def query_knowledge(
         ctx_parts = [x for x in [p.get("product_name"), p.get("doc_type")] if x]
         chunk_context = " / ".join(ctx_parts) if ctx_parts else filename
 
-        # GCS 簽名 URL（1 小時有效）
+        # GCS 簽名 URL（1 小時有效）+ 乾淨 TAP/NC 檔名（basename）
         code_url: str | None = None
-        if p.get("code_gcs_path"):
+        code_filename: str | None = None
+        code_gcs_path = chunk_id_to_code_path.get(p.get("chunk_id", ""))
+        if code_gcs_path:
             try:
-                code_url = generate_signed_url(p["code_gcs_path"], expiration_seconds=3600)
+                code_url = generate_signed_url(code_gcs_path, expiration_seconds=3600)
+                code_filename = code_gcs_path.rsplit("/", 1)[-1]
             except Exception as e:
                 logger.warning(
-                    f"signed URL 生成失敗, code_gcs_path={p['code_gcs_path']} error={e}",
+                    f"signed URL 生成失敗, code_gcs_path={code_gcs_path} error={e}",
                     extra={
                         "phase": "phase5",
                         "service": "query",
@@ -223,6 +249,7 @@ async def query_knowledge(
                 chunk_context=chunk_context,
                 score=round(r["score"], 4),
                 code_download_url=code_url,
+                code_filename=code_filename,
             )
         )
 

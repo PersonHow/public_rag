@@ -537,7 +537,7 @@ async def generate_answer(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2,      # 回答比 ETL 轉換稍高一點，語氣更自然
+        temperature=0,        # 查詢回答求穩定一致，關閉隨機性（同問題同答案）
         max_tokens=2048,
         
     )

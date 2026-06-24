@@ -1,4 +1,4 @@
-<app-page-head title="對話" desc="詢問知識庫中的加工參數、品質標準與工序規範" />
+<app-page-head title="對話" desc="詢問知識庫中的建議工法、品質標準與工序規範" />
 
 @if (isSuperAdmin() && !activeCompanyId()) {
   <div class="tenant-warn">
@@ -21,16 +21,13 @@
               {{ msg.text }}
             }
           </div>
-          @if (msg.sources?.length) {
-            <div class="citations">
-              @for (s of msg.sources; track s.doc_filename + s.chunk_context) {
-                @if (s.code_download_url) {
-                  <a class="cite" [href]="s.code_download_url" target="_blank" rel="noopener">
-                    § {{ s.chunk_context || s.doc_filename }} ↓
-                  </a>
-                } @else {
-                  <span class="cite">§ {{ s.chunk_context || s.doc_filename }}</span>
-                }
+          @if (msg.downloads?.length) {
+            <div class="downloads">
+              <span class="downloads-label">可下載程式檔</span>
+              @for (d of msg.downloads; track d.filename) {
+                <a class="dl" [href]="d.url" target="_blank" rel="noopener">
+                  ⬇ {{ d.filename }}
+                </a>
               }
             </div>
           }

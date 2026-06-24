@@ -37,12 +37,19 @@
 }
 .msg.me .bubble { background: var(--ink); color: var(--cream); box-shadow: 3px 3px 0 var(--rust); }
 
-.citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.downloads {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px;
+}
 
-.cite {
+.downloads-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; color: var(--muted); margin-right: 2px;
+}
+
+.dl {
   display: inline-block;
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  background: var(--cream); border: 1.5px solid var(--rust) !important; color: var(--rust);
+  background: var(--cream); border: 1.5px solid var(--teal) !important; color: var(--teal);
   padding: 4px 10px; box-shadow: 2px 2px 0 var(--ink) !important; cursor: pointer;
   letter-spacing: .04em; text-decoration: none;
 
