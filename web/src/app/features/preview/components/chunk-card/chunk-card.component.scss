@@ -172,3 +172,14 @@
   color: var(--muted); text-align: right;
   padding: 4px 0; letter-spacing: .08em;
 }
+
+// ── 圖面規格（specs）─────────────────────────────────────
+.gc-specs {
+  margin-top: 10px;
+
+  .gc-specs-label {
+    display: block; margin-bottom: 6px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .12em; color: var(--muted);
+  }
+}

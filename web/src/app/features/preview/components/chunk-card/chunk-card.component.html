@@ -134,12 +134,20 @@
       }
 
       <!-- 完全沒結構欄位 + 不可編輯 → 顯示空狀態 -->
-      @if (!editable && !active.situation && !active.action && !active.reason && !active.applies_to) {
+      @if (!editable && !active.situation && !active.action && !active.reason && !active.applies_to && !active.specs) {
         <div class="gc-field">
           <span class="gc-field-value gc-field-value--empty">（無結構欄位）</span>
         </div>
       }
     </div>
+
+    <!-- 圖面規格（specs；工程圖面抽取時才有）-->
+    @if (active.specs) {
+      <div class="gc-specs">
+        <span class="gc-specs-label">圖面規格</span>
+        <app-spec-table [specs]="active.specs" />
+      </div>
+    }
 
     <!-- Embed text 摺疊區 -->
     <div class="gc-embed">

@@ -169,6 +169,40 @@ export class PreviewService {
     return updated;
   }
 
+  // ── 批次預覽用 helpers ────────────────────────────────
+  /** 查單一 session 狀態（含 filename），供批次切換器顯示。 */
+  async fetchStatus(sessionId: string): Promise<SessionStatusResponse> {
+    return firstValueFrom(
+      this.http.get<SessionStatusResponse>(`${environment.apiUrl}/sessions/${sessionId}`)
+    );
+  }
+
+  /** 確認前檢查 session 是否解析完成可確認（有 chunks 或純程式/圖檔）。 */
+  async checkReady(sessionId: string): Promise<boolean> {
+    try {
+      const data = await firstValueFrom(
+        this.http.get<SessionChunksResponse>(
+          `${environment.apiUrl}/sessions/${sessionId}/chunks`
+        )
+      );
+      if (data.status !== 'pending_preview') return false;
+      if (data.chunks.length > 0) return true;
+      return data.documents.length > 0 &&
+        data.documents.every(d => ['tap', 'nc', 'dxf', 'unknown'].includes(d.doc_type));
+    } catch {
+      return false;
+    }
+  }
+
+  /** 只送出 confirm，不動目前 active session 狀態（批次確認非 active 的 session 用）。 */
+  async confirmRaw(sessionId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post<ConfirmResponse>(
+        `${environment.apiUrl}/sessions/${sessionId}/confirm`, {}
+      )
+    );
+  }
+
   async confirm(sessionId: string): Promise<ConfirmResponse> {
     const res = await firstValueFrom(
       this.http.post<ConfirmResponse>(

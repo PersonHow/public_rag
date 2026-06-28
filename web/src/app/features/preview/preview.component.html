@@ -2,12 +2,32 @@
 
 <app-page-head title="預覽資料">
   <p subtitle style="color:var(--muted);font-size:13px;margin:0">
-    Session: <span style="font-family:var(--font-mono)">{{ sessionId }}</span>
+    Session: <span style="font-family:var(--font-mono)">{{ activeSessionId() }}</span>
   </p>
   <div actions class="row">
     <app-status-badge [label]="statusLabel()" [color]="statusColor()" />
   </div>
 </app-page-head>
+
+@if (isBatch()) {
+  <div class="batch-switcher">
+    <div class="bs-head">
+      <span class="px-label" style="margin:0">// 本批檔案</span>
+      <span class="px-mono" style="font-size:11px;color:var(--muted)">
+        {{ batchFiles().length }} 份 · 待確認 {{ pendingBatchCount() }}
+      </span>
+    </div>
+    <div class="bs-list">
+      @for (f of batchFiles(); track f.sessionId) {
+        <button class="bs-item" [class.active]="f.sessionId === activeSessionId()"
+                (click)="selectSession(f.sessionId)">
+          <span class="bs-name">{{ f.filename || f.sessionId }}</span>
+          <app-status-badge [label]="statusText(f.status)" [color]="statusColorFor(f.status)" />
+        </button>
+      }
+    </div>
+  </div>
+}
 
 @if (svc.loading()) {
   <app-empty-state [loading]="true" />
@@ -95,7 +115,7 @@
           @for (group of groupedChunks(); track group.productName) {
             <app-chunk-card
               [group]="group"
-              [sessionId]="sessionId"
+              [sessionId]="activeSessionId()"
               [editable]="canEditChunks()" />
           }
           @if (groupedChunks().length === 0) {
@@ -120,7 +140,7 @@
       @if (!svc.fullTextLoading() && svc.fullText(); as ft) {
         <app-fulltext-view
           [fullText]="ft"
-          [sessionId]="sessionId"
+          [sessionId]="activeSessionId()"
           [editable]="canEditChunks()" />
       }
 
@@ -136,8 +156,8 @@
     <app-empty-state message="此 Session 僅含程式／圖檔（不產生 chunks），可直接確認歸屬。" />
   }
 
-  <!-- ── Confirm bar（移到 chunks 區塊外，純程式檔也能確認）── -->
-  @if (svc.canConfirm() && isAdmin()) {
+  <!-- ── Confirm bar（單筆預覽；移到 chunks 區塊外，純程式檔也能確認）── -->
+  @if (!isBatch() && svc.canConfirm() && isAdmin()) {
     <div class="confirm-bar">
       <div class="info">
         <span class="px-stamp">審視完畢？</span>
@@ -146,6 +166,25 @@
       <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</app-button>
       <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirm()">
         {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
+      </app-button>
+    </div>
+  }
+
+  <!-- ── 批次確認 bar（批次預覽時）── -->
+  @if (isBatch() && isAdmin() && pendingBatchCount() > 0) {
+    <div class="confirm-bar">
+      <div class="info">
+        <span class="px-stamp">批次確認</span>
+        <span style="color:var(--muted);font-size:12px">
+          這批還有 {{ pendingBatchCount() }} 份待確認，僅會確認已解析完成的檔案，無法撤回。
+        </span>
+      </div>
+      @if (svc.canConfirm()) {
+        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕此份</app-button>
+        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onConfirm()">確認此份</app-button>
+      }
+      <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirmAll()">
+        {{ actionLoading() ? '處理中…' : '✓ 全部確認 (' + pendingBatchCount() + ')' }}
       </app-button>
     </div>
   }

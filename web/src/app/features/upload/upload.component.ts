@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { UploadService } from '../../core/services/upload.service';
 import { UploadJob } from '../../shared/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -19,6 +19,7 @@ export class UploadComponent {
   readonly uploadSvc = inject(UploadService);
   private readonly toast  = inject(ToastService);
   private readonly auth   = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly isDragOver = signal(false);
   readonly queue = this.uploadSvc.queue;
@@ -26,6 +27,18 @@ export class UploadComponent {
   readonly uploadingCount = computed(() => this.queue().filter(j => j.status === 'uploading').length);
   readonly doneCount      = computed(() => this.queue().filter(j => j.status === 'done').length);
   readonly errorCount     = computed(() => this.queue().filter(j => j.status === 'error').length);
+
+  /** 已完成上傳、可預覽的 session id（依加入順序）。 */
+  readonly doneSessionIds = computed(() =>
+    this.queue().filter(j => j.status === 'done' && j.sessionId).map(j => j.sessionId as string)
+  );
+
+  /** 一次預覽這批所有已上傳檔案。 */
+  previewBatch(): void {
+    const ids = this.doneSessionIds();
+    if (ids.length === 0) return;
+    this.router.navigate(['/preview', ids[0]], { queryParams: { batch: ids.join(',') } });
+  }
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;

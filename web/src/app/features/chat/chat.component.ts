@@ -98,8 +98,14 @@ export class ChatComponent implements AfterViewChecked {
         ? `${environment.apiUrl}/query?company_id=${this.activeCompanyId()}`
         : `${environment.apiUrl}/query`;
 
+      // 近幾輪對話（排除打字中與初始問候），供後端把追問補成獨立問句
+      const history = this.messages()
+        .filter(m => !m.typing && m.text)
+        .slice(-7, -1)            // 不含剛 push 進去的本次提問
+        .map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
+
       const res = await firstValueFrom(
-        this.http.post<QueryResponse>(url, { question: text, top_k: 5 })
+        this.http.post<QueryResponse>(url, { question: text, top_k: 5, history })
       );
       const downloads = this._extractDownloads(res.sources);
       this.messages.update(m =>

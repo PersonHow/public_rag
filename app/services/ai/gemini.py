@@ -539,10 +539,64 @@ async def generate_answer(
         ],
         temperature=0,        # 查詢回答求穩定一致，關閉隨機性（同問題同答案）
         max_tokens=2048,
-        
+        # gemini-2.5-flash thinking 預設會吃掉 max_tokens 額度，導致答案在輸出途中
+        # 被截斷（finish_reason=length）。RAG 為片段抽取/彙整，不需深度推理，關閉。
+        extra_body={"google": {"thinking_config": {"thinking_budget": 0}}},
     )
- 
+
     return (response.choices[0].message.content or "").strip()
+
+
+_CONDENSE_SYSTEM_PROMPT = """\
+你是查詢改寫助手。根據對話歷史，把使用者「最新問題」改寫成一個語意完整、不依賴上下文的獨立問句。
+
+規則：
+- 補回被省略的主詞（產品名稱、零件、料號、情境），讓問句單獨拿出來也能被理解。
+- 只做指代與省略的補全，不要新增對話中沒出現的條件，也不要回答問題。
+- 若最新問題本身已語意完整，原樣輸出。
+- 只輸出改寫後的問句本身，不要任何解釋、標點以外的前後綴。\
+"""
+
+
+async def condense_question(
+    history: list[dict],
+    question: str,
+) -> str:
+    """
+    多輪查詢改寫：把依賴上下文的追問補成獨立問句，供檢索使用。
+
+    history: [{"role": "user"|"bot", "text": str}, ...]（近幾輪，時間正序）
+    失敗時 fallback 回原問題，不讓改寫成為查詢的單點故障。
+    """
+    if not history:
+        return question
+
+    convo = "\n".join(
+        f"{'操作員' if h.get('role') == 'user' else '助理'}：{h.get('text', '')}"
+        for h in history
+        if h.get("text")
+    )
+    user_prompt = f"對話歷史：\n{convo}\n\n最新問題：{question}\n\n改寫後的獨立問句："
+
+    try:
+        token_mgr = TokenManager.get_instance()
+        token = await token_mgr.get_token()
+        client = _build_vertex_client(token)
+        response = await client.chat.completions.create(
+            model=settings.GEMINI_MODEL,
+            messages=[
+                {"role": "system", "content": _CONDENSE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0,
+            max_tokens=256,
+            # 同 generate_answer：關閉 thinking，避免改寫被截斷成殘句
+            extra_body={"google": {"thinking_config": {"thinking_budget": 0}}},
+        )
+        rewritten = (response.choices[0].message.content or "").strip()
+        return rewritten or question
+    except Exception:
+        return question
 
 
 class GeminiMaxRetriesError(Exception):

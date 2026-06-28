@@ -1,0 +1,22 @@
+@if (rows().length > 0) {
+  <div class="spec-table">
+    @for (row of rows(); track row.label) {
+      <div class="spec-row">
+        <div class="spec-key">{{ row.label }}</div>
+        <div class="spec-val">
+          @if (row.values.length > 1) {
+            <ul class="spec-list">
+              @for (v of row.values; track $index) {
+                <li>{{ v }}</li>
+              }
+            </ul>
+          } @else {
+            {{ row.values[0] }}
+          }
+        </div>
+      </div>
+    }
+  </div>
+} @else if (fallback()) {
+  <pre class="spec-raw">{{ fallback() }}</pre>
+}

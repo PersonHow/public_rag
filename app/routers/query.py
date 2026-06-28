@@ -28,14 +28,60 @@ from app.models.document import Document
 from app.schemas.auth import CurrentUser
 from app.schemas.query import QueryRequest, QueryResponse, SourceItem
 from app.services.ai.embedding import embed_texts
-from app.services.ai.gemini import generate_answer
-from app.services.ai.qdrant_service import search
+from app.services.ai.gemini import condense_question, generate_answer
+from app.services.ai.qdrant_service import list_situations_by_product, search
 from app.services.storage.gcs import generate_signed_url
 from app.prompts.query_prompt import SYSTEM_PROMPT, build_rag_prompt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
+
+
+# 引導式詢問：撈對產品但問題對不上時，列出該產品實際可查的情境而非直接拒答。
+# 門檻用來區分「撈對產品(實測 0.77~0.80)」與「完全離題(實測 ~0.53)」，離題仍維持單純拒答。
+GUIDED_SCORE_THRESHOLD = 0.70
+GUIDED_MAX_ITEMS = 15
+
+
+def _build_guided_answer(product_name: str, product_id: str, situations: list[str]) -> str:
+    shown = situations[:GUIDED_MAX_ITEMS]
+    lines = "\n".join(f"- {s}" for s in shown)
+    more = (
+        f"\n（以上為「{product_name}」可查詢項目的一部分，共 {len(situations)} 項）"
+        if len(situations) > GUIDED_MAX_ITEMS
+        else ""
+    )
+    return (
+        f"我在「{product_name}（{product_id}）」的資料中沒有找到直接對應你問題的內容。\n"
+        f"你想了解的是不是以下其中一項？\n{lines}{more}\n\n"
+        f"請用上述項目的描述再問一次，我就能提供對應的處理方式。"
+    )
+
+
+async def _maybe_guided(
+    answer: str,
+    results: list,
+    company_id: str,
+    loop,
+) -> str:
+    """拒答且撈對產品時，改回傳該產品可查詢情境的引導式詢問。否則原樣回傳。"""
+    if "未找到" not in answer or not results:
+        return answer
+    top = results[0]
+    if top.get("score", 0.0) < GUIDED_SCORE_THRESHOLD:
+        return answer
+    payload = top.get("payload", {})
+    pid = payload.get("product_id")
+    pname = payload.get("product_name")
+    if not pid or not pname:
+        return answer
+    situations = await loop.run_in_executor(
+        None, lambda: list_situations_by_product(company_id, pid)
+    )
+    if not situations:
+        return answer
+    return _build_guided_answer(pname, pid, situations)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -117,8 +163,26 @@ async def query_knowledge(
         },
     )
 
-    # ── 1. 問題向量化 ─────────────────────────────────────────────────────
-    vectors = await embed_texts([req.question], task_type="RETRIEVAL_QUERY")
+    # ── 1. 多輪改寫 + 問題向量化 ──────────────────────────────────────────
+    # 有對話歷史時，先把追問補成不依賴上下文的獨立問句（指代/省略補全），
+    # 否則「只有正面要處理嗎？」這類追問會脫離主詞，撈到別的產品。
+    search_question = req.question
+    if req.history:
+        search_question = await condense_question(
+            [h.model_dump() for h in req.history], req.question
+        )
+        if search_question != req.question:
+            logger.info(
+                f"多輪改寫: {req.question!r} -> {search_question!r}",
+                extra={
+                    "phase": "phase5",
+                    "service": "query",
+                    "company_id": effective_company_id,
+                    "session_id": None,
+                },
+            )
+
+    vectors = await embed_texts([search_question], task_type="RETRIEVAL_QUERY")
     query_vector = vectors[0]
 
     # ── 2. Qdrant 語意搜尋（強制 company_id filter）────────────────────────
@@ -206,11 +270,14 @@ async def query_knowledge(
             chunk_id_to_code_path[str(chunk_id)] = code_path
 
     # ── 4. 組 RAG Prompt → Gemini Flash 生成 ─────────────────────────────
-    user_prompt = build_rag_prompt(req.question, results, doc_id_to_filename)
+    user_prompt = build_rag_prompt(search_question, results, doc_id_to_filename)
     answer = await generate_answer(
         system_prompt=SYSTEM_PROMPT,
         user_prompt=user_prompt,
     )
+
+    # 撈對產品但問題對不上 → 改成引導式詢問，列出該產品可查的情境
+    answer = await _maybe_guided(answer, results, effective_company_id, loop)
 
     # ── 5. 組 Sources（含 GCS 簽名 URL）──────────────────────────────────
     sources: list[SourceItem] = []

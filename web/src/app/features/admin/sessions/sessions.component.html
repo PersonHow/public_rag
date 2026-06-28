@@ -10,10 +10,28 @@
 }
 
 @if (!loading() && sessions().length > 0) {
+  @if (selectedCount() > 0) {
+    <div class="batch-bar">
+      <span class="px-mono" style="font-size:12px;color:var(--muted)">已選取 {{ selectedCount() }} 份</span>
+      <span style="flex:1"></span>
+      <app-button variant="ghost" size="sm" [disabled]="batchLoading()" (click)="previewSelected()">
+        預覽選取 ({{ selectedCount() }}) ▸
+      </app-button>
+      <app-button variant="rust" size="sm" [disabled]="batchLoading()" (click)="confirmSelected()">
+        {{ batchLoading() ? '處理中…' : '✓ 批次確認 (' + selectedCount() + ')' }}
+      </app-button>
+    </div>
+  }
   <div class="card" style="padding:0;overflow:hidden">
     <table class="sessions-table">
       <thead>
         <tr>
+          <th style="width:36px">
+            <input type="checkbox" [checked]="allPendingSelected()"
+                   [disabled]="pendingSessions().length === 0"
+                   (change)="toggleAll()" />
+          </th>
+          <th>檔案</th>
           <th>Session ID</th>
           <th>狀態</th>
           <th>已確認</th>
@@ -24,6 +42,13 @@
       <tbody>
         @for (s of sessions(); track s.session_id) {
           <tr>
+            <td>
+              @if (s.status === 'pending_preview') {
+                <input type="checkbox" [checked]="isSelected(s.session_id)"
+                       (change)="toggle(s.session_id)" />
+              }
+            </td>
+            <td>{{ s.filename ?? '—' }}</td>
             <td class="session-id" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
             <td>
               <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />

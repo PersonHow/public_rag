@@ -178,6 +178,46 @@ def search(
     ]
 
 
+def list_situations_by_product(
+    company_id: str,
+    product_id: str,
+    limit: int = 200,
+) -> list[str]:
+    """
+    撈出某產品在 Qdrant 中所有非空、去重的 situation（保留出現順序）。
+    供「引導式詢問」：當撈對產品但問題對不上時，列出該產品實際可查詢的情境。
+    強制帶 company_id（多租戶隔離，不可省略）。
+    """
+    client = _get_client()
+    seen: set[str] = set()
+    situations: list[str] = []
+    offset = None
+
+    while True:
+        batch, offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(key="company_id", match=MatchValue(value=company_id)),
+                    FieldCondition(key="product_id", match=MatchValue(value=product_id)),
+                ]
+            ),
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for p in batch:
+            s = (p.payload.get("situation") or "").strip()
+            if s and s not in seen:
+                seen.add(s)
+                situations.append(s)
+        if offset is None or len(situations) >= limit:
+            break
+
+    return situations
+
+
 def normalize_product_name_by_doc(doc_id: str, company_id: str) -> int:
     """
     同一 doc_id 的所有 chunks 做 product_name 多數決，

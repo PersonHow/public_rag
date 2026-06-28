@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Chunk, ChunkPatch } from '../../../../shared/models';
 import { PreviewService } from '../../../../core/services/preview.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { SpecTableComponent } from '../../../../shared/components/spec-table/spec-table.component';
 
 export interface ChunkGroup {
   productName: string;
@@ -26,7 +27,7 @@ export type InlineEditableField =
 @Component({
   selector: 'app-chunk-card',
   standalone: true,
-  imports: [SlicePipe, FormsModule],
+  imports: [SlicePipe, FormsModule, SpecTableComponent],
   templateUrl: './chunk-card.component.html',
   styleUrl: './chunk-card.component.scss',
 })

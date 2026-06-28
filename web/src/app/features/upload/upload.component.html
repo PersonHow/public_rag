@@ -37,6 +37,16 @@
 
 <!-- Queue -->
 @if (queue().length > 0) {
+  @if (doneSessionIds().length > 1) {
+    <div class="batch-bar">
+      <span class="px-mono" style="font-size:12px;color:var(--muted)">
+        已完成 {{ doneSessionIds().length }} 份，可一次預覽與確認整批
+      </span>
+      <app-button variant="primary" size="sm" (click)="previewBatch()">
+        預覽全部 ({{ doneSessionIds().length }}) ▸
+      </app-button>
+    </div>
+  }
   <div class="queue">
     @for (job of queue(); track job.id) {
       <div class="queue-item" [class.is-failed]="job.status === 'error'">

@@ -53,11 +53,19 @@ async def get_session_status(
     current_user: CurrentUser = Depends(_confirm_allowed),
 ) -> SessionStatusResponse:
     session = await _get_session_or_404(session_id, db)
+    filename = (
+        await db.execute(
+            select(Document.filename)
+            .where(Document.session_id == session.session_id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
     return SessionStatusResponse(
         session_id=session.session_id,
         status=session.status,
         fail_reason=session.fail_reason,
         preview_confirmed=session.preview_confirmed,
+        filename=filename,
     )
 
 
@@ -318,12 +326,25 @@ async def list_sessions(
         query = query.where(IngestionSession.company_id == company_id)
     result = await db.execute(query.order_by(IngestionSession.created_at.desc()).limit(100))
     sessions = result.scalars().all()
+
+    # 一次撈出這批 session 的檔名，避免 N+1（每個 session 僅一份 document）
+    session_ids = [s.session_id for s in sessions]
+    filename_by_session: dict[uuid.UUID, str] = {}
+    if session_ids:
+        docs_result = await db.execute(
+            select(Document.session_id, Document.filename)
+            .where(Document.session_id.in_(session_ids))
+        )
+        for sid, fname in docs_result.all():
+            filename_by_session.setdefault(sid, fname)
+
     return [
         SessionStatusResponse(
             session_id=s.session_id,
             status=s.status,
             fail_reason=s.fail_reason,
             preview_confirmed=s.preview_confirmed,
+            filename=filename_by_session.get(s.session_id),
         )
         for s in sessions
     ]
