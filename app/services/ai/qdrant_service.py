@@ -178,43 +178,40 @@ def search(
     ]
 
 
-def list_situations_by_product(
+def search_situations_by_product(
+    query_vector: list[float],
     company_id: str,
     product_id: str,
-    limit: int = 200,
+    limit: int = 8,
 ) -> list[str]:
     """
-    撈出某產品在 Qdrant 中所有非空、去重的 situation（保留出現順序）。
-    供「引導式詢問」：當撈對產品但問題對不上時，列出該產品實際可查詢的情境。
+    在某產品範圍內依「與問題的相關度」排序，回傳去重後的非空 situation。
+    供「引導式詢問」：撈對產品但問題對不上時，把最可能想問的項目排前面。
+    複用問題向量做一次 Qdrant 搜尋，不需額外 embedding。
     強制帶 company_id（多租戶隔離，不可省略）。
     """
     client = _get_client()
+    results = client.search(
+        collection_name=COLLECTION_NAME,
+        query_vector=query_vector,
+        query_filter=Filter(
+            must=[
+                FieldCondition(key="company_id", match=MatchValue(value=company_id)),
+                FieldCondition(key="product_id", match=MatchValue(value=product_id)),
+            ]
+        ),
+        limit=max(limit * 4, 40),  # 撈多一點，去重/去空後取前 limit
+        with_payload=True,
+    )
     seen: set[str] = set()
     situations: list[str] = []
-    offset = None
-
-    while True:
-        batch, offset = client.scroll(
-            collection_name=COLLECTION_NAME,
-            scroll_filter=Filter(
-                must=[
-                    FieldCondition(key="company_id", match=MatchValue(value=company_id)),
-                    FieldCondition(key="product_id", match=MatchValue(value=product_id)),
-                ]
-            ),
-            limit=100,
-            offset=offset,
-            with_payload=True,
-            with_vectors=False,
-        )
-        for p in batch:
-            s = (p.payload.get("situation") or "").strip()
-            if s and s not in seen:
-                seen.add(s)
-                situations.append(s)
-        if offset is None or len(situations) >= limit:
+    for r in results:
+        s = (r.payload.get("situation") or "").strip()
+        if s and s not in seen:
+            seen.add(s)
+            situations.append(s)
+        if len(situations) >= limit:
             break
-
     return situations
 
 

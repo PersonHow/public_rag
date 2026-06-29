@@ -41,10 +41,10 @@
 </div>
 
 <div class="hub-grid" [class.hub-grid-4]="cards().length === 4">
-  @for (c of cards(); track c.key) {
+  @for (c of cards(); track c.key; let idx = $index) {
     <a class="hub-card hub-{{ c.kind }}" [routerLink]="c.go">
       <div class="hub-card-top">
-        <span class="px-section-num">{{ c.n }} / 0{{ cards().length }}</span>
+        <span class="px-section-num">{{ c.n+(idx+1)  }} / 0{{ cards().length }}</span>
       </div>
       <div class="hub-card-title">{{ c.title }}</div>
       <div class="hub-card-sub">{{ c.sub }}</div>
@@ -57,11 +57,11 @@
   }
 </div>
 
-<div class="hub-tips">
+<!-- <div class="hub-tips">
   @for (tip of tips(); track $index) {
     <div class="hub-tip">
       <span class="px-stamp">TIP / 0{{ $index + 1 }}</span>
       <p>{{ tip }}</p>
     </div>
   }
-</div>
+</div> -->

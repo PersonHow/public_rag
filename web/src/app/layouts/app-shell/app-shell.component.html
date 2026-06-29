@@ -24,41 +24,11 @@
   }
 
   <nav class="tb-nav">
-    @if (isSuperAdmin()) {
-      <a class="px-tab" routerLink="/upload" routerLinkActive="active">
+    @for(s of headerSelected(); track s.title; let idx = $index){
+      <a class="px-tab" [routerLink]="s.go" routerLinkActive="active">
         <span class="px-tab-text">
-          <span class="px-section-num small">01</span>
-          <span>三步驟流程</span>
-        </span>
-      </a>
-    }
-    <a class="px-tab" routerLink="/chat" routerLinkActive="active">
-      <span class="px-tab-text">
-        <span class="px-section-num small">02</span>
-        <span>對話</span>
-      </span>
-    </a>
-    @if (isSuperAdmin()) {
-      <a class="px-tab" routerLink="/admin/sessions" routerLinkActive="active">
-        <span class="px-tab-text">
-          <span class="px-section-num small">03</span>
-          <span>Sessions</span>
-        </span>
-      </a>
-    }
-    @if (isAdmin()) {
-      <a class="px-tab" routerLink="/admin/users" routerLinkActive="active">
-        <span class="px-tab-text">
-          <span class="px-section-num small">04</span>
-          <span>使用者</span>
-        </span>
-      </a>
-    }
-    @if (isSuperAdmin()) {
-      <a class="px-tab" routerLink="/admin/companies" routerLinkActive="active">
-        <span class="px-tab-text">
-          <span class="px-section-num small">05</span>
-          <span>租戶</span>
+          <span class="px-section-num small">{{s.sectionNum+(idx+1)}}</span>
+          <span>{{s.title}}</span>
         </span>
       </a>
     }
