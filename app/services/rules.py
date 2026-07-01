@@ -229,7 +229,7 @@ _CHUNK_FIELDS = """## Chunk 欄位說明
 - action: 處理方法或操作步驟
 - reason: 原因說明或注意事項
 - applies_to: 適用的產品或零件
-- doc_type: 文件類型（pdf / docx / tap 等）
+- doc_type: 可省略或填 null（文件類型由後端依副檔名自動判定，不需你推斷）
 - case_id: 同案件多份文件串聯 ID
 - face: 加工面向，如「第一面」、「第二面」，原始文件怎麼寫就怎麼填，無此資訊填 null
 - embed_text: **最重要的欄位**"""

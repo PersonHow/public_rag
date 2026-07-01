@@ -24,7 +24,9 @@ class GeminiChunkOutput(BaseModel):
     action: Optional[str] = None
     reason: Optional[str] = None
     applies_to: Optional[str] = None
-    doc_type: str
+    # doc_type 不信任 Gemini 輸出：實際類別由後端依副檔名（Document.doc_type）注入，
+    # 存 DB 時用的是 document.doc_type，這裡只接收、不強制。允許 null 避免整批連坐失敗。
+    doc_type: Optional[str] = None
     case_id: Optional[str] = None
     embed_text: str  # NOT NULL，驗證在下方
 
@@ -42,13 +44,6 @@ class GeminiChunkOutput(BaseModel):
         if not v or not v.strip():
             raise ValueError("embed_text 不能為空字串或 null")
         return v.strip()
-
-    @field_validator("doc_type")
-    @classmethod
-    def doc_type_not_empty(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("doc_type 不能為空字串")
-        return v.strip().lower()
 
     model_config = {"extra": "ignore"}  # 忽略 Gemini 可能輸出的額外欄位
 
