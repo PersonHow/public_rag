@@ -37,7 +37,6 @@
       height: 32px;
       display: grid;
       place-items: center;
-      font-family: var(--font-mono);
       font-size: 12px;
       font-weight: 700;
       background: var(--bg-3);
@@ -47,7 +46,6 @@
     }
 
     .lab {
-      font-family: var(--font-mono);
       font-size: 9px;
       letter-spacing: .16em;
       color: var(--muted);
@@ -56,7 +54,6 @@
     }
 
     .name {
-      font-family: var(--font-mono);
       font-size: 13px;
       font-weight: 700;
       color: var(--ink);

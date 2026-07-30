@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 from enum import Enum
 import uuid
 
@@ -23,6 +24,7 @@ class UserResponse(BaseModel):
     role: str
     company_id: Optional[uuid.UUID] = None
     is_active: bool
+    last_login_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

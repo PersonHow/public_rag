@@ -20,7 +20,7 @@ from app.routers import auth, rules                             # Phase 2 / Phas
 from app.routers import query, preview, stats                          # Phase 5
 from app.routers import conversations                                   # Phase 6
 from app.routers.internal import tasks
-from app.routers.admin import companies, users, internal_setup  # Phase 2
+from app.routers.admin import companies, users, internal_setup, login_logs  # Phase 2
 
 settings = get_settings()
 
@@ -80,6 +80,7 @@ app.include_router(auth.router)
 app.include_router(companies.router)
 app.include_router(users.router)
 app.include_router(internal_setup.router)
+app.include_router(login_logs.router)
 
 # Phase 3
 app.include_router(rules.router)

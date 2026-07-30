@@ -1,8 +1,8 @@
 <div class="hub-head">
   <div>
     <span class="px-stamp rust">PUBLIC_LLM </span>
-    <h1 class="hub-greet">{{ greet() }}，<span class="emph">{{ displayName() }}</span></h1>
-    <p class="hub-sub">
+    <h1 class="hub-greet mono">{{ greet() }}，<span class="emph">{{ displayName() }}</span></h1>
+    <p class="hub-sub mono">
       <span class="px-label" style="display:inline">// ROLE</span>
       <strong>{{ role() }}</strong>
       <span style="color:var(--muted)">·</span>
@@ -36,8 +36,8 @@
 
 <div class="hub-section-head">
   <span class="px-section-num">SELECT / 0{{ cards().length }}</span>
-  <h2 class="hub-section-title">選擇要進入的功能</h2>
-  <span class="hub-section-meta">{{ isAdmin() ? 'ADMIN VIEW' : 'MEMBER VIEW' }}</span>
+  <h2 class="hub-section-title mono">選擇要進入的功能</h2>
+  <span class="hub-section-meta mono">{{ isAdmin() ? 'ADMIN VIEW' : 'MEMBER VIEW' }}</span>
 </div>
 
 <div class="hub-grid" [class.hub-grid-4]="cards().length === 4">
@@ -46,12 +46,12 @@
       <div class="hub-card-top">
         <span class="px-section-num">{{ c.n+(idx+1)  }} / 0{{ cards().length }}</span>
       </div>
-      <div class="hub-card-title">{{ c.title }}</div>
-      <div class="hub-card-sub">{{ c.sub }}</div>
+      <div class="hub-card-title mono">{{ c.title }}</div>
+      <div class="hub-card-sub mono">{{ c.sub }}</div>
       <div class="hub-card-desc">{{ c.desc }}</div>
       <div class="hub-card-foot">
-        <span class="hub-card-meta">{{ c.meta }}</span>
-        <span class="hub-card-cta">{{ c.action }} ▸</span>
+        <span class="hub-card-meta mono">{{ c.meta }}</span>
+        <span class="hub-card-cta mono">{{ c.action }} ▸</span>
       </div>
     </a>
   }

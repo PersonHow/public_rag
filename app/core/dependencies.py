@@ -7,6 +7,7 @@ FastAPI dependency：
   - resolve_company_id     → superadmin 用 ?company_id=，其他從 JWT 取
   - require_company_id     → 同上，但強制不能為 None
 """
+import logging
 import uuid
 from typing import Optional
 
@@ -24,6 +25,18 @@ from app.services.auth import decode_token
 # 讓我們能 fallback 到 httpOnly cookie。
 bearer_scheme = HTTPBearer(auto_error=False)
 
+logger = logging.getLogger(__name__)
+
+
+def _auth_reject_log(request: Optional[Request], reason: str) -> None:
+    """驗證失敗的 stdout log（不落 DB：token 驗證失敗量大且無帳號脈絡）。"""
+    path = request.url.path if request is not None else None
+    ip = request.client.host if request is not None and request.client else None
+    logger.warning({"level": "WARNING", "phase": "phase2", "service": "auth",
+                    "session_id": None, "company_id": None,
+                    "message": "Auth rejected", "reason": reason,
+                    "path": path, "ip": ip})
+
 
 async def get_current_user(
     request: Request = None,
@@ -35,19 +48,23 @@ async def get_current_user(
     if not token and credentials is not None:
         token = credentials.credentials
     if not token:
+        _auth_reject_log(request, "missing_token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     payload = decode_token(token)
     if not payload:
+        _auth_reject_log(request, "invalid_or_expired_token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
 
     user_id = payload.get("sub")
     if not user_id:
+        _auth_reject_log(request, "invalid_token_payload")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
     result = await db.execute(select(User).where(User.user_id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
+        _auth_reject_log(request, "user_not_found_or_inactive")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
     # role 與 company_id 一律取 DB 即時值，而非 JWT 簽發時的快照：
@@ -65,6 +82,12 @@ def require_roles(*roles: str):
     """RBAC 工廠：回傳只允許指定 role 的 dependency。"""
     async def _check(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         if current_user.role not in roles:
+            logger.warning({"level": "WARNING", "phase": "phase2", "service": "auth",
+                            "session_id": None,
+                            "company_id": str(current_user.company_id) if current_user.company_id else None,
+                            "message": "Permission denied", "reason": "insufficient_role",
+                            "email": current_user.email, "role": current_user.role,
+                            "required_roles": list(roles)})
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
     return _check

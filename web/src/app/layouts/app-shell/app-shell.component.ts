@@ -65,6 +65,8 @@ export class AppShellComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    // 先確認 cookie session 仍有效，避免 sessionStorage 有身分但 token 已過期的卡住狀態
+    await this.auth.validateSession();
     if (this.isSuperAdmin()) {
       await this.ctx.loadCompanies();
     }

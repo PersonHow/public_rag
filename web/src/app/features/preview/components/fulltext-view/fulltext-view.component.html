@@ -8,12 +8,12 @@
 
         <!-- 產品節標題列（v2 唯讀；要改產品名請點下方條目的「歸類」） -->
         <div class="ftv-section-head">
-          <h3 class="ftv-section-name">{{ section.productName }}</h3>
+          <h3 class="ftv-section-name mono">{{ section.productName }}</h3>
           @if (section.productId) {
-            <span class="ftv-section-pid">{{ section.productId }}</span>
+            <span class="ftv-section-pid mono">{{ section.productId }}</span>
           }
           <div class="ftv-section-rule"></div>
-          <span class="ftv-section-count">{{ section.items.length }} 條</span>
+          <span class="ftv-section-count mono">{{ section.items.length }} 條</span>
         </div>
 
         <!-- 材料 + 尺寸 specs -->
@@ -21,18 +21,18 @@
           <div class="ftv-specs">
             @if (section.material) {
               <span class="ftv-spec">
-                <span class="ftv-spec-label">材料</span>{{ section.material }}
+                <span class="ftv-spec-label mono">材料</span>{{ section.material }}
               </span>
             }
             @if (section.dimensions) {
               <span class="ftv-spec">
-                <span class="ftv-spec-label">尺寸</span>{{ section.dimensions }}
+                <span class="ftv-spec-label mono">尺寸</span>{{ section.dimensions }}
               </span>
             }
           </div>
         }
 
-        <div class="ftv-intro">應注意：</div>
+        <div class="ftv-intro mono">應注意：</div>
 
         <!-- 條列清單 -->
         <ol class="ftv-list">
@@ -40,7 +40,7 @@
             <li class="ftv-item"
                 [class.ftv-item--editing]="editingChunkId() === item.chunk_id">
 
-              <span class="ftv-item-num">{{ idx + 1 }}.</span>
+              <span class="ftv-item-num mono">{{ idx + 1 }}.</span>
 
               <div class="ftv-item-body">
 
@@ -63,7 +63,7 @@
                 <!-- reason -->
                 @if (isEditing(item.chunk_id, 'reason')) {
                   <p class="ftv-reason ftv-reason--editing">
-                    <span class="ftv-reason-label">原因</span>
+                    <span class="ftv-reason-label mono">原因</span>
                     <textarea class="ftv-input ftv-input--field" rows="2"
                               [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
                               (blur)="saveEdit(item.reason)"
@@ -74,7 +74,7 @@
                   <p class="ftv-reason"
                      [class.ftv-editable]="editable"
                      (click)="beginEdit(item, 'reason')">
-                    <span class="ftv-reason-label">原因</span>
+                    <span class="ftv-reason-label mono">原因</span>
                     @if (item.reason) {
                       {{ item.reason }}
                     } @else {
@@ -86,7 +86,7 @@
                 <!-- action -->
                 @if (isEditing(item.chunk_id, 'action')) {
                   <p class="ftv-action ftv-action--editing">
-                    <span class="ftv-action-label">動作</span>
+                    <span class="ftv-action-label mono">動作</span>
                     <textarea class="ftv-input ftv-input--field" rows="2"
                               [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
                               (blur)="saveEdit(item.action)"
@@ -97,7 +97,7 @@
                   <p class="ftv-action"
                      [class.ftv-editable]="editable"
                      (click)="beginEdit(item, 'action')">
-                    <span class="ftv-action-label">動作</span>
+                    <span class="ftv-action-label mono">動作</span>
                     @if (item.action) {
                       {{ item.action }}
                     } @else {
@@ -114,7 +114,7 @@
                 <!-- 歸類（產品名）：每條 chunk 自己的 product_name；editable 才顯示 -->
                 @if (editable) {
                   @if (isEditing(item.chunk_id, 'product_name')) {
-                    <p class="ftv-classify ftv-classify--editing">
+                    <p class="ftv-classify ftv-classify--editing mono">
                       <span class="ftv-classify-label">歸類</span>
                       <input class="ftv-input ftv-input--inline" type="text"
                              list="ftv-known-products"
@@ -124,10 +124,10 @@
                              [disabled]="saving()" autofocus />
                     </p>
                   } @else {
-                    <p class="ftv-classify ftv-editable"
+                    <p class="ftv-classify ftv-editable mono"
                        (click)="beginEdit(item, 'product_name')">
                       <span class="ftv-classify-label">歸類</span>
-                      <span class="ftv-classify-value"
+                      <span class="ftv-classify-value mono"
                             [class.ftv-empty-pl-text]="!item.product_name">
                         {{ item.product_name || '（未指定，點擊指派）' }}
                       </span>
@@ -152,7 +152,7 @@
   </div>
 
   @if (saving()) {
-    <div class="ftv-saving-indicator">儲存中…</div>
+    <div class="ftv-saving-indicator mono">儲存中…</div>
   }
 
   <!-- 「歸類」input 的自動完成清單；放最後一次即可，全域共用 -->

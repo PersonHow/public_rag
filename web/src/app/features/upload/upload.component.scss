@@ -8,7 +8,7 @@
     box-shadow: 4px 4px 0 var(--rust);
   }
 
-  h3 { font-family: var(--font-mono); font-size: 18px; margin: 12px 0 4px; font-weight: 700; }
+  h3 { font-size: 18px; margin: 12px 0 4px; font-weight: 700; } // 字體由全域 h1-h4 規則提供
   p { margin: 0; color: var(--muted); font-size: 13px; }
 
   .types { margin-top: 12px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
@@ -34,7 +34,7 @@
 
 .file-ico {
   width: 42px; height: 42px; display: grid; place-items: center;
-  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
 
   &.pdf  { background: rgba(196,69,54,.14); color: var(--rust); }
   &.docx { background: rgba(25,114,120,.14); color: var(--teal); }
@@ -46,17 +46,17 @@
 .q-meta { min-width: 0; }
 
 .q-name {
-  font-family: var(--font-mono); font-weight: 700; font-size: 13px;
+  font-weight: 700; font-size: 13px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   display: flex; align-items: center; gap: 4px;
 }
 
-.q-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+.q-sub { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
 
 .err-detail {
   margin-top: 10px; padding: 10px 12px;
   border: 1.5px dashed var(--rust); background: rgba(196,69,54,.04);
-  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.55;
+  font-size: 11.5px; line-height: 1.55;
 }
 
 .err-code {

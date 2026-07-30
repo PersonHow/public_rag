@@ -7,7 +7,7 @@
   @if (isSuperAdmin()) {
     <div class="tb-company-picker">
       <span class="px-label">TENANT</span>
-      <select class="co-select"
+      <select class="co-select mono"
         [ngModel]="ctx.activeCompanyId() ?? '' "
         (ngModelChange)="onCompanyChange($event)">
         <option value="">— 全局視角 —</option>
@@ -25,7 +25,7 @@
 
   <nav class="tb-nav">
     @for(s of headerSelected(); track s.title; let idx = $index){
-      <a class="px-tab" [routerLink]="s.go" routerLinkActive="active">
+      <a class="px-tab mono" [routerLink]="s.go" routerLinkActive="active">
         <span class="px-tab-text">
           <span class="px-section-num small">{{s.sectionNum+(idx+1)}}</span>
           <span>{{s.title}}</span>
@@ -37,10 +37,10 @@
   <div class="tb-spacer"></div>
 
   <div class="tb-me">
-    <div class="px-avatar">{{ avatarChar() }}</div>
+    <div class="px-avatar mono">{{ avatarChar() }}</div>
     <div class="me-meta">
-      <div class="nm">{{ email() }}</div>
-      <div class="rl">{{ role() }}</div>
+      <div class="nm mono">{{ email() }}</div>
+      <div class="rl mono">{{ role() }}</div>
     </div>
     <app-button variant="icon" (click)="logout()" title="登出">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

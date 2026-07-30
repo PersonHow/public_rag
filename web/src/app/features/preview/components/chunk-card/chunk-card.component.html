@@ -11,7 +11,7 @@
                (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
                [disabled]="saving()" autofocus />
       } @else {
-        <span class="gc-product"
+        <span class="gc-product mono"
               [class.gc-editable]="editable"
               (click)="beginEdit('product_name')">
           {{ active.product_name || '（未指定產品）' }}
@@ -25,11 +25,11 @@
                (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
                [disabled]="saving()" autofocus />
       } @else if (active.material) {
-        <span class="gc-tag"
+        <span class="gc-tag mono"
               [class.gc-editable]="editable"
               (click)="beginEdit('material')">{{ active.material }}</span>
       } @else if (editable) {
-        <span class="gc-tag gc-tag--placeholder gc-editable"
+        <span class="gc-tag gc-tag--placeholder gc-editable mono"
               (click)="beginEdit('material')">+ 材質</span>
       }
 
@@ -40,32 +40,32 @@
                (blur)="saveEdit()" (keydown)="onInputKeydown($event)"
                [disabled]="saving()" autofocus />
       } @else if (active.dimensions) {
-        <span class="gc-tag"
+        <span class="gc-tag mono"
               [class.gc-editable]="editable"
               (click)="beginEdit('dimensions')">{{ active.dimensions }}</span>
       } @else if (editable) {
-        <span class="gc-tag gc-tag--placeholder gc-editable"
+        <span class="gc-tag gc-tag--placeholder gc-editable mono"
               (click)="beginEdit('dimensions')">+ 尺寸</span>
       }
 
     </div>
     <div class="gc-head-right">
-      <span class="gc-count-badge">{{ group.chunks.length }} 筆</span>
-      <span class="gc-doctype">{{ group.docType }}</span>
+      <span class="gc-count-badge mono">{{ group.chunks.length }} 筆</span>
+      <span class="gc-doctype mono">{{ group.docType }}</span>
     </div>
   </div>
 
   <!-- Body：當前 chunk 欄位 -->
   <div class="gc-body">
 
-    <div class="gc-chunk-id">{{ active.chunk_id | slice:0:8 }}…</div>
+    <div class="gc-chunk-id mono">{{ active.chunk_id | slice:0:8 }}…</div>
 
     <div class="gc-fields">
 
       <!-- situation -->
       @if (editingField() === 'situation') {
         <div class="gc-field gc-field--editing">
-          <span class="gc-field-label">狀況</span>
+          <span class="gc-field-label mono">狀況</span>
           <textarea class="gc-input gc-input--field" rows="3"
                     [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
                     (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
@@ -75,7 +75,7 @@
         <div class="gc-field"
              [class.gc-editable]="editable"
              (click)="beginEdit('situation')">
-          <span class="gc-field-label">狀況</span>
+          <span class="gc-field-label mono">狀況</span>
           <span class="gc-field-value"
                 [class.gc-field-value--empty]="!active.situation">
             {{ active.situation || '（點擊新增）' }}
@@ -86,7 +86,7 @@
       <!-- action -->
       @if (editingField() === 'action') {
         <div class="gc-field gc-field--editing">
-          <span class="gc-field-label">動作</span>
+          <span class="gc-field-label mono">動作</span>
           <textarea class="gc-input gc-input--field" rows="3"
                     [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
                     (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
@@ -96,7 +96,7 @@
         <div class="gc-field"
              [class.gc-editable]="editable"
              (click)="beginEdit('action')">
-          <span class="gc-field-label">動作</span>
+          <span class="gc-field-label mono">動作</span>
           <span class="gc-field-value"
                 [class.gc-field-value--empty]="!active.action">
             {{ active.action || '（點擊新增）' }}
@@ -107,7 +107,7 @@
       <!-- reason -->
       @if (editingField() === 'reason') {
         <div class="gc-field gc-field--editing">
-          <span class="gc-field-label">原因</span>
+          <span class="gc-field-label mono">原因</span>
           <textarea class="gc-input gc-input--field" rows="3"
                     [ngModel]="draftValue()" (ngModelChange)="draftValue.set($event)"
                     (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
@@ -117,7 +117,7 @@
         <div class="gc-field"
              [class.gc-editable]="editable"
              (click)="beginEdit('reason')">
-          <span class="gc-field-label">原因</span>
+          <span class="gc-field-label mono">原因</span>
           <span class="gc-field-value"
                 [class.gc-field-value--empty]="!active.reason">
             {{ active.reason || '（點擊新增）' }}
@@ -128,7 +128,7 @@
       <!-- applies_to：唯讀（v2 不開放編輯） -->
       @if (active.applies_to) {
         <div class="gc-field">
-          <span class="gc-field-label">適用</span>
+          <span class="gc-field-label mono">適用</span>
           <span class="gc-field-value">{{ active.applies_to }}</span>
         </div>
       }
@@ -144,7 +144,7 @@
     <!-- 圖面規格（specs；工程圖面抽取時才有）-->
     @if (active.specs) {
       <div class="gc-specs">
-        <span class="gc-specs-label">圖面規格</span>
+        <span class="gc-specs-label mono">圖面規格</span>
         <app-spec-table [specs]="active.specs" />
       </div>
     }
@@ -152,7 +152,7 @@
     <!-- Embed text 摺疊區 -->
     <div class="gc-embed">
       <button class="gc-embed-toggle" (click)="toggleEmbed()">
-        <span class="gc-embed-label">EMBED_TEXT</span>
+        <span class="gc-embed-label mono">EMBED_TEXT</span>
         <span class="gc-embed-arrow">{{ embedExpanded() ? '▴' : '▾' }}</span>
       </button>
       @if (embedExpanded()) {
@@ -162,7 +162,7 @@
                     (blur)="saveEdit()" (keydown)="onTextareaKeydown($event)"
                     [disabled]="saving()" autofocus></textarea>
         } @else {
-          <div class="gc-embed-text"
+          <div class="gc-embed-text mono"
                [class.gc-editable]="editable"
                (click)="beginEdit('embed_text')">
             {{ active.embed_text }}
@@ -172,7 +172,7 @@
     </div>
 
     @if (saving()) {
-      <div class="gc-saving">儲存中…</div>
+      <div class="gc-saving mono">儲存中…</div>
     }
 
   </div>
@@ -180,9 +180,9 @@
   <!-- Nav footer：超過 1 筆才顯示 -->
   @if (group.chunks.length > 1) {
     <div class="gc-nav">
-      <button class="gc-nav-btn" (click)="prev()">‹</button>
-      <span class="gc-nav-indicator">{{ carouselIdx() + 1 }} / {{ group.chunks.length }}</span>
-      <button class="gc-nav-btn" (click)="next()">›</button>
+      <button class="gc-nav-btn mono" (click)="prev()">‹</button>
+      <span class="gc-nav-indicator mono">{{ carouselIdx() + 1 }} / {{ group.chunks.length }}</span>
+      <button class="gc-nav-btn mono" (click)="next()">›</button>
     </div>
   }
 

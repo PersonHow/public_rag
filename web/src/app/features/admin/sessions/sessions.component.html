@@ -49,7 +49,7 @@
               }
             </td>
             <td>{{ s.filename ?? '—' }}</td>
-            <td class="session-id" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
+            <td class="session-id mono" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
             <td>
               <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
             </td>
@@ -65,13 +65,13 @@
       </tbody>
     </table>
   </div>
-  <div class="table-foot">
+  <div class="table-foot mono">
     共 {{ sessions().length }} 筆 · pending_preview: {{ pendingCount() }} 筆
   </div>
 }
 
 @if (apiError()) {
-  <div class="api-error">
+  <div class="api-error mono">
     ⚠ {{ apiError() }}<br/>
     <span style="color:var(--muted)">Sessions 列表 API 尚未實作（Phase 2+），顯示空列表。</span>
   </div>

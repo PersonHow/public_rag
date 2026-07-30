@@ -62,7 +62,7 @@
       <tbody>
         @for (c of companies(); track c.company_id) {
           <tr>
-            <td class="uid">{{ c.company_id | truncateId }}</td>
+            <td class="uid mono">{{ c.company_id | truncateId }}</td>
             <td><strong>{{ c.name }}</strong></td>
             <td style="color:var(--muted);font-size:12px">{{ c.industry ?? '—' }}</td>
             <td>

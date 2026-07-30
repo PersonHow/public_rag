@@ -41,7 +41,12 @@ def _build_client(db_user):
 
     async def _fake_db():
         result = SimpleNamespace(scalar_one_or_none=lambda: db_user)
-        yield SimpleNamespace(execute=AsyncMock(return_value=result))
+        # add / commit：logout 會寫入 login_logs 稽核紀錄
+        yield SimpleNamespace(
+            execute=AsyncMock(return_value=result),
+            add=lambda _obj: None,
+            commit=AsyncMock(),
+        )
 
     app.dependency_overrides[get_db] = _fake_db
     return TestClient(app)

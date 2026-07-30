@@ -25,7 +25,7 @@
         <div class="px-mono" style="font-size:11px;letter-spacing:.2em;color:var(--muted);margin-top:6px">INTERNAL · MULTI-TENANT LLM</div>
       </div>
     </div>
-    <h1 class="hero-h1">
+    <h1 class="hero-h1 mono">
       把公司的<em>知識</em><br/>
       變成隨手可問的<br/>
       <span class="emph">同事</span>
@@ -40,7 +40,7 @@
   <!-- Right form -->
   <div class="login-form-col">
     <div class="px-frame">
-      <div class="px-frame-stamp">SIGN IN · 01</div>
+      <div class="px-frame-stamp mono">SIGN IN · 01</div>
       <h2 class="px-mono" style="font-size:22px;font-weight:700;margin:6px 0 2px">登入</h2>
       <p class="px-tag-small" style="margin-bottom:14px">USE YOUR COMPANY E-MAIL</p>
 
@@ -49,11 +49,11 @@
       <form (ngSubmit)="onSubmit()" class="login-grid" autocomplete="off">
         <label class="field">
           <span class="px-label">// EMAIL</span>
-          <input type="email" [(ngModel)]="email" name="email" placeholder="you@company.com" required />
+          <input class="mono" type="email" [(ngModel)]="email" name="email" placeholder="you@company.com" required />
         </label>
         <label class="field">
           <span class="px-label">// PASSWORD</span>
-          <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" required />
+          <input class="mono" type="password" [(ngModel)]="password" name="password" placeholder="••••••••" required />
         </label>
         <app-button variant="rust" type="submit" [disabled]="loading()">
           {{ loading() ? '登入中…' : '[ 登入 ▸ ]' }}
@@ -63,7 +63,7 @@
       <div class="px-rule"></div>
 
       @if (errorMsg()) {
-        <div class="login-error">
+        <div class="login-error mono">
           ⚠ {{ errorMsg() }}
         </div>
       }

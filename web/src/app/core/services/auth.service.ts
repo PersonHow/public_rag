@@ -13,6 +13,7 @@ export class AuthService {
   private readonly router = inject(Router);
 
   // access_token 改放 httpOnly cookie，JS 不再持有；此處只保留非敏感的身分資訊供 UI 使用。
+  // 用 sessionStorage：分頁關閉即失效（視同登出），重新整理不受影響。
   private readonly _user = signal<CurrentUser | null>(this._loadUser());
 
   readonly currentUser  = this._user.asReadonly();
@@ -35,7 +36,21 @@ export class AuthService {
       company_name: res.company_name,
     };
     this._user.set(user);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  /**
+   * 向後端驗證 cookie session 是否仍有效。
+   * 前端身分狀態（sessionStorage）與 httpOnly cookie 可能脫鉤
+   * （如 token 過期後重新整理），401 時由 error interceptor 統一登出。
+   */
+  async validateSession(): Promise<void> {
+    if (!this._user()) return;
+    try {
+      await firstValueFrom(this.http.get(`${environment.apiUrl}/users/me`));
+    } catch {
+      // 401 已由 error interceptor 處理（自動登出＋提示），其他錯誤不動登入狀態。
+    }
   }
 
   async logout(): Promise<void> {
@@ -45,13 +60,14 @@ export class AuthService {
       // 後端清 cookie 失敗也要清掉前端狀態，避免卡在已登出但畫面仍顯示登入。
     }
     this._user.set(null);
-    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(USER_KEY);
     this.router.navigate(['/login']);
   }
 
   private _loadUser(): CurrentUser | null {
+    localStorage.removeItem(USER_KEY); // 清除舊版存放在 localStorage 的身分（已改用 sessionStorage）
     try {
-      const raw = localStorage.getItem(USER_KEY);
+      const raw = sessionStorage.getItem(USER_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   }

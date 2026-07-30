@@ -32,6 +32,9 @@ body {
 // ── Typography ────────────────────────────────────────────
 h1, h2, h3, h4 { font-family: var(--font-mono) !important; letter-spacing: -.005em; }
 
+// 等寬字體 utility：取代各元件重複宣告 font-family: var(--font-mono)
+.mono { font-family: var(--font-mono); }
+
 // ── Pills ─────────────────────────────────────────────────
 .pill {
   display: inline-flex; align-items: center; gap: 5px;

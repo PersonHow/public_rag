@@ -22,12 +22,12 @@
 }
 
 .ftv-section-name {
-  font-family: var(--font-mono); font-size: 18px; font-weight: 700;
+  font-size: 18px; font-weight: 700;
   letter-spacing: .04em; color: var(--ink); margin: 0; flex-shrink: 0;
 }
 
 .ftv-section-pid {
-  font-family: var(--font-mono); font-size: 14px; color: var(--muted); flex-shrink: 0;
+  font-size: 14px; color: var(--muted); flex-shrink: 0;
 }
 
 .ftv-section-rule {
@@ -35,7 +35,7 @@
 }
 
 .ftv-section-count {
-  font-family: var(--font-mono); font-size: 14px; color: var(--muted); flex-shrink: 0;
+  font-size: 14px; color: var(--muted); flex-shrink: 0;
 }
 
 // ── Specs ────────────────────────────────────────────────
@@ -44,13 +44,13 @@
 .ftv-spec { font-size: 12px; color: var(--ink); }
 
 .ftv-spec-label {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   letter-spacing: .06em; color: var(--muted); margin-right: 6px;
 }
 
 // ── 條列 ─────────────────────────────────────────────────
 .ftv-intro {
-  font-family: var(--font-mono); font-size: 12px;
+  font-size: 12px;
   letter-spacing: .04em; color: var(--muted); margin-bottom: 10px;
 }
 
@@ -62,7 +62,7 @@
 .ftv-item { display: flex; gap: 10px; align-items: flex-start; }
 
 .ftv-item-num {
-  font-family: var(--font-mono); font-size: 14px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   color: var(--muted); flex-shrink: 0; min-width: 22px; padding-top: 2px;
 }
 
@@ -78,7 +78,7 @@
 }
 
 .ftv-reason-label {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   letter-spacing: .1em; color: var(--rust); opacity: .75; flex-shrink: 0; padding-top: 1px;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .ftv-action-label {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   letter-spacing: .1em; color: var(--teal); opacity: .75; flex-shrink: 0; padding-top: 1px;
 }
 
@@ -137,7 +137,7 @@
 // ── 歸類列 ────────────────────────────────────────────────
 .ftv-classify {
   margin: 6px 0 0;
-  font-family: var(--font-mono); font-size: 12px;
+  font-size: 12px;
   color: var(--muted);
   display: flex; align-items: center; gap: 6px;
   padding: 4px 4px 0;
@@ -149,7 +149,7 @@
 }
 
 .ftv-classify-value {
-  color: var(--ink); font-family: var(--font-mono); font-size: 12px;
+  color: var(--ink); font-size: 12px;
 }
 
 .ftv-classify-caret {
@@ -157,7 +157,7 @@
 }
 
 .ftv-saving-indicator {
-  font-family: var(--font-mono); font-size: 10px;
+  font-size: 10px;
   color: var(--muted); letter-spacing: .08em;
   padding: 4px 20px 8px; text-align: right;
 }

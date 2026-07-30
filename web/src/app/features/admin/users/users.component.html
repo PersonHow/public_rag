@@ -79,7 +79,7 @@
       <tbody>
         @for (u of users(); track u.user_id) {
           <tr>
-            <td class="uid">{{ u.user_id | truncateId }}</td>
+            <td class="uid mono">{{ u.user_id | truncateId }}</td>
             <td>{{ u.email }}</td>
             <td>
               <app-status-badge [label]="u.role" [color]="roleColor(u.role)" />

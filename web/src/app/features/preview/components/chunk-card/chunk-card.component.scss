@@ -4,6 +4,9 @@
 
 :host { display: block; }
 
+// 等寬字體改用全域 .mono utility（掛在模板 class 上）。
+// .gc-input--* 例外：需宣告在 .gc-input（font-family: inherit）之後才能覆蓋。
+
 .gc {
   border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
   background: var(--bg-3); overflow: hidden;
@@ -19,22 +22,22 @@
 .gc-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .gc-product {
-  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   letter-spacing: .04em; color: var(--cream);
 }
 
 .gc-tag {
-  font-family: var(--font-mono); font-size: 10px; color: var(--cream);
+  font-size: 10px; color: var(--cream);
   border: 1px solid rgba(255,255,255,.25); padding: 1px 7px; opacity: .8;
 }
 
 .gc-count-badge {
-  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
   color: var(--ink); background: var(--teal); padding: 1px 8px;
 }
 
 .gc-doctype {
-  font-family: var(--font-mono); font-size: 10px;
+  font-size: 10px;
   color: var(--cream); letter-spacing: .08em; opacity: .6;
 }
 
@@ -42,7 +45,7 @@
 .gc-body { padding: 14px 16px 0; background: var(--bg-2); }
 
 .gc-chunk-id {
-  font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+  font-size: 9px; color: var(--muted);
   letter-spacing: .08em; margin-bottom: 10px;
 }
 
@@ -51,7 +54,7 @@
 .gc-field { display: flex; align-items: baseline; gap: 10px; }
 
 .gc-field-label {
-  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  font-size: 9px; font-weight: 700;
   letter-spacing: .12em; text-transform: uppercase;
   color: var(--teal); flex-shrink: 0; min-width: 32px;
 }
@@ -72,7 +75,7 @@
 }
 
 .gc-embed-label {
-  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  font-size: 9px; font-weight: 700;
   letter-spacing: .14em; color: var(--muted);
 }
 
@@ -80,7 +83,7 @@
 
 .gc-embed-text {
   padding: 10px 16px 14px;
-  font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+  font-size: 11px; line-height: 1.7;
   color: var(--muted); white-space: pre-wrap; word-break: break-word;
   background: var(--bg-3);
 }
@@ -92,7 +95,7 @@
 }
 
 .gc-nav-btn {
-  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  font-size: 16px; font-weight: 700;
   color: var(--ink); background: none; border: 1.5px solid var(--ink);
   width: 28px; height: 28px; display: flex; align-items: center;
   justify-content: center; cursor: pointer; line-height: 1;
@@ -101,7 +104,7 @@
 }
 
 .gc-nav-indicator {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   color: var(--ink); letter-spacing: .06em; min-width: 40px; text-align: center;
 }
 
@@ -168,7 +171,7 @@
 }
 
 .gc-saving {
-  font-family: var(--font-mono); font-size: 10px;
+  font-size: 10px;
   color: var(--muted); text-align: right;
   padding: 4px 0; letter-spacing: .08em;
 }
@@ -179,7 +182,7 @@
 
   .gc-specs-label {
     display: block; margin-bottom: 6px;
-    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    font-size: 10px; font-weight: 700;
     letter-spacing: .12em; color: var(--muted);
   }
 }

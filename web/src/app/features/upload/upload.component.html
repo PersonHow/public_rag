@@ -50,9 +50,9 @@
   <div class="queue">
     @for (job of queue(); track job.id) {
       <div class="queue-item" [class.is-failed]="job.status === 'error'">
-        <div class="file-ico {{ fileExt(job.name) }}">{{ fileExt(job.name).toUpperCase() }}</div>
+        <div class="file-ico mono {{ fileExt(job.name) }}">{{ fileExt(job.name).toUpperCase() }}</div>
         <div class="q-meta">
-          <div class="q-name">
+          <div class="q-name mono">
             {{ job.name }}
             @if (job.status === 'done') {
               <span class="pill teal" style="margin-left:4px">完成</span>
@@ -61,14 +61,14 @@
               <span class="pill rust" style="margin-left:4px">失敗</span>
             }
           </div>
-          <div class="q-sub">{{ formatSize(job.size) }}</div>
+          <div class="q-sub mono">{{ formatSize(job.size) }}</div>
           @if (job.status === 'uploading') {
             <div class="progress-track" style="margin-top:8px">
               <div class="progress-bar" [style.width.%]="job.pct"></div>
             </div>
           }
           @if (job.status === 'error') {
-            <div class="err-detail">
+            <div class="err-detail mono">
               <span class="err-code">ERR</span>
               <span style="margin-left:8px;font-weight:600">{{ job.errorMsg }}</span>
             </div>

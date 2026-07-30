@@ -11,6 +11,8 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user_id: Optional[str] = None
+    email: Optional[str] = None
     role: str
     company_id: Optional[str] = None
     company_name: Optional[str] = None

@@ -1,7 +1,7 @@
 <app-page-head title="對話" desc="詢問知識庫中的建議工法、品質標準與工序規範" />
 
 @if (isSuperAdmin() && !activeCompanyId()) {
-  <div class="tenant-warn">
+  <div class="tenant-warn mono">
     ⚠ 請先在頂部 TENANT 下拉選單選擇租戶，才能進行查詢。
   </div>
 }
@@ -10,7 +10,7 @@
   <div class="messages" #msgBox>
     @for (msg of messages(); track msg.id) {
       <div class="msg" [class.me]="msg.role==='user'" [class.bot]="msg.role==='bot'">
-        <div class="av">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
+        <div class="av mono">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
         <div>
           <div class="bubble">
             @if (msg.typing) {
@@ -23,9 +23,9 @@
           </div>
           @if (msg.downloads?.length) {
             <div class="downloads">
-              <span class="downloads-label">可下載程式檔</span>
+              <span class="downloads-label mono">可下載程式檔</span>
               @for (d of msg.downloads; track d.filename) {
-                <a class="dl" [href]="d.url" target="_blank" rel="noopener">
+                <a class="dl mono" [href]="d.url" target="_blank" rel="noopener">
                   ⬇ {{ d.filename }}
                 </a>
               }

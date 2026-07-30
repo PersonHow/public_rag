@@ -6,5 +6,5 @@ from app.models.company import Company
 from app.models.product import Product
 from app.models.user import User
 from app.models.conversation import ConversationHistory
-__all__ = ["IngestionSession", "Document", "Chunk", "CompanyRule", "Company", "Product", "User", "ConversationHistory"]
-
+from app.models.login_log import LoginLog
+__all__ = ["IngestionSession", "Document", "Chunk", "CompanyRule", "Company", "Product", "User", "ConversationHistory", "LoginLog"]

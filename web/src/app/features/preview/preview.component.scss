@@ -36,12 +36,12 @@
 }
 
 .doc-name {
-  display: block; font-family: var(--font-mono); font-size: 11px;
+  display: block; font-size: 11px;
   font-weight: 700; color: var(--ink); word-break: break-all;
 }
 
 .doc-meta {
-  display: block; font-family: var(--font-mono); font-size: 10px;
+  display: block; font-size: 10px;
   color: var(--muted); margin-top: 2px;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .view-tab {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   letter-spacing: .08em; padding: 8px 20px;
   border: 2px solid var(--ink); border-bottom: none;
   background: var(--bg-3); color: var(--muted);
@@ -103,7 +103,7 @@
   &.failed    { border-color: var(--rust);  box-shadow: 3px 3px 0 var(--rust);  color: var(--rust); }
   &.processing {
     border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink);
-    color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+    color: var(--muted); font-size: 12px;
   }
 }
 
