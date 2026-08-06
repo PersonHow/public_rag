@@ -83,4 +83,7 @@
 
     &:disabled { opacity: .45; cursor: not-allowed; }
   }
+
+  // 送出按鈕撐滿與 textarea 同高（.btn 在 app-button 模板內，需穿透 encapsulation）
+  ::ng-deep .btn { align-self: stretch; }
 }

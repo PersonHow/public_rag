@@ -53,11 +53,18 @@ export class AuthService {
     }
   }
 
+  // 防重入：連點登出或多個 401 同時觸發時，避免重複呼叫 logout API（會產生多筆登出稽核記錄）。
+  private _loggingOut = false;
+
   async logout(): Promise<void> {
+    if (this._loggingOut) return;
+    this._loggingOut = true;
     try {
       await firstValueFrom(this.http.post(`${environment.apiUrl}/auth/logout`, {}));
     } catch {
       // 後端清 cookie 失敗也要清掉前端狀態，避免卡在已登出但畫面仍顯示登入。
+    } finally {
+      this._loggingOut = false;
     }
     this._user.set(null);
     sessionStorage.removeItem(USER_KEY);
