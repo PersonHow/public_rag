@@ -47,6 +47,18 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def security_headers_middleware(request, call_next):
+    """資安弱掃修復：純 API 服務不載入任何資源，CSP 鎖到最嚴。
+    /docs、/redoc（僅非 production 存在）需要載入 Swagger UI 資源，故排除。"""
+    response = await call_next(request)
+    is_docs = request.url.path.startswith(("/docs", "/redoc", "/openapi.json"))
+    if settings.app_env == "production" or not is_docs:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
 # ── Startup Event ─────────────────────────────────────────────────────────────
 
 @app.on_event("startup")
