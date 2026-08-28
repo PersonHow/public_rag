@@ -55,6 +55,10 @@ async def upload_document(
     """
     company_id_str = str(company_id)
 
+    # 先用 multipart 解析出的 size 擋掉超大檔，避免整檔讀進記憶體後才拒絕
+    if file.size is not None and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail=f"檔案超過 {MAX_FILE_SIZE // 1024 // 1024}MB 限制")
+
     file_bytes = await file.read()
     if len(file_bytes) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail=f"檔案超過 {MAX_FILE_SIZE // 1024 // 1024}MB 限制")

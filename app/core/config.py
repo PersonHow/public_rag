@@ -125,6 +125,14 @@ class Settings(BaseSettings):
         """converted/{company_id}/{session_id}/chunks.json"""
         return f"converted/{company_id}/{session_id}/chunks.json"
 
+    def gcs_converted_code_path(self, company_id: str, doc_id: str, filename: str) -> str:
+        """converted/{company_id}/code/{doc_id}/{filename}
+
+        TAP/NC 檔的永久保存位置。raw/ 有 15 天 lifecycle 自動刪除，
+        chunk.code_gcs_path 若指向 raw/ 會在 15 天後產出失效的簽名 URL，
+        故 inject-gcs-paths 時複製到 converted/（永久保留）。"""
+        return f"converted/{company_id}/code/{doc_id}/{filename}"
+
     model_config = ConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

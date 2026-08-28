@@ -21,13 +21,14 @@ Phase 4 變更：
 Phase 5 變更：
   -新增 chunk_index（enumerate 保留文件內順序）。
 """
+import asyncio
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -288,13 +289,17 @@ async def ingest_chunks(
     # ── 5. Upsert Qdrant（先清後寫：先刪該 doc 既有向量，再寫新向量）──────
     # chunk_id 每次 process-document 重生成，舊向量靠新 chunk_id 蓋不掉，
     # 必須先按 doc_id 整組清掉，否則重灌會殘留孤兒。先清後寫使向量化全冪等。
-    delete_chunks_by_doc_ids([str(did) for did in doc_ids], company_id_str)
+    # QdrantClient 是同步 blocking，用 run_in_executor 包裝避免卡住 event loop
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        None, delete_chunks_by_doc_ids, [str(did) for did in doc_ids], company_id_str,
+    )
     try:
-        upsert_chunks(points)
+        await loop.run_in_executor(None, upsert_chunks, points)
     except Exception as e:
         logger.error(f"Qdrant upsert 失敗，嘗試回滾: {e}", extra=log_extra)
         try:
-            delete_chunks_by_ids(chunk_ids)
+            await loop.run_in_executor(None, delete_chunks_by_ids, chunk_ids)
         except Exception as rollback_err:
             logger.error(f"Qdrant rollback 失敗: {rollback_err}", extra=log_extra)
         await _mark_session_failed(session, db, reason=f"qdrant upsert failed: {e}", log_extra=log_extra)
@@ -304,7 +309,9 @@ async def ingest_chunks(
     # ── 5.5 product_name 正規化（多數決，冪等）──────────────────────────────
     total_fixed = 0
     for did in doc_ids:
-        total_fixed += normalize_product_name_by_doc(str(did), company_id_str)
+        total_fixed += await loop.run_in_executor(
+            None, normalize_product_name_by_doc, str(did), company_id_str,
+        )
     if total_fixed > 0:
         logger.info(
             "product_name 正規化完成",
@@ -373,11 +380,15 @@ async def inject_gcs_paths(
     )
 
     # ── 3. 取全公司 code_gcs_path = null 且有 product_id 的 chunks ──────
+    # 也包含指向 raw/ 的舊資料：raw/ 有 15 天 lifecycle，需重新注入搬遷到 converted/
     chunks_result = await db.execute(
         select(Chunk).where(
             Chunk.company_id == company_id,
             Chunk.product_id.isnot(None),
-            Chunk.code_gcs_path.is_(None),
+            or_(
+                Chunk.code_gcs_path.is_(None),
+                Chunk.code_gcs_path.like("raw/%"),
+            ),
         )
     )
     chunks = list(chunks_result.scalars().all())
@@ -388,6 +399,7 @@ async def inject_gcs_paths(
 
     # ── 4. 比對 + 注入 ────────────────────────────────────────────────────
     injected_count = 0
+    converted_path_by_doc: dict[uuid.UUID, Optional[str]] = {}
 
     for chunk in chunks:
         pid = chunk.product_id  # e.g. "A034-189010-1"
@@ -422,8 +434,12 @@ async def inject_gcs_paths(
                 )
 
         if matched_doc:
-            chunk.code_gcs_path = matched_doc.gcs_raw_path
-            injected_count += 1
+            converted_path = await _ensure_code_in_converted(
+                matched_doc, company_id_str, converted_path_by_doc, log_extra,
+            )
+            if converted_path:
+                chunk.code_gcs_path = converted_path
+                injected_count += 1
 
     await db.flush()
 
@@ -436,6 +452,45 @@ async def inject_gcs_paths(
         "injected_count": injected_count,
         "total_chunks": len(chunks),
     }
+
+
+async def _ensure_code_in_converted(
+    doc: Document,
+    company_id_str: str,
+    cache: dict[uuid.UUID, Optional[str]],
+    log_extra: dict,
+) -> Optional[str]:
+    """
+    把 TAP/NC 檔從 raw/ 複製到 converted/（永久保留），回傳 converted 路徑。
+    raw/ 有 15 天 lifecycle 自動刪除，chunk.code_gcs_path 直接指向 raw/
+    會讓查詢時的簽名 URL 在 15 天後失效。
+    複製失敗（來源已被刪且 converted/ 也沒有）→ 回 None，chunk 保持原值。
+    """
+    if doc.doc_id in cache:
+        return cache[doc.doc_id]
+
+    filename = doc.gcs_raw_path.split("/")[-1]
+    dst_path = settings.gcs_converted_code_path(company_id_str, str(doc.doc_id), filename)
+    loop = asyncio.get_event_loop()
+    try:
+        copied = await loop.run_in_executor(
+            None, gcs_service.copy_object, doc.gcs_raw_path, dst_path,
+        )
+    except Exception as e:
+        logger.error(
+            f"TAP 複製到 converted/ 失敗: {e}",
+            extra={**log_extra, "doc_id": str(doc.doc_id)},
+        )
+        copied = False
+
+    result = dst_path if copied else None
+    if not copied:
+        logger.warning(
+            "TAP 原始檔已不存在且 converted/ 無備份，chunk 不注入",
+            extra={**log_extra, "doc_id": str(doc.doc_id), "src": doc.gcs_raw_path},
+        )
+    cache[doc.doc_id] = result
+    return result
 
 # ── 共用輔助函式 ──────────────────────────────────────────────────────────────
 

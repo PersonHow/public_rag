@@ -76,6 +76,24 @@ def get_gcs_uri(gcs_path: str) -> str:
     return f"gs://{settings.GCS_BUCKET_NAME}/{gcs_path}"
 
 
+def copy_object(src_path: str, dst_path: str) -> bool:
+    """
+    Server-side 複製 GCS 物件（同步 blocking，async context 請用 run_in_executor 包裝）。
+    冪等：目標已存在直接回 True；來源不存在（如已被 lifecycle 刪除）回 False。
+    """
+    bucket = _get_bucket()
+    dst_blob = bucket.blob(dst_path)
+    if dst_blob.exists():
+        return True
+    src_blob = bucket.blob(src_path)
+    if not src_blob.exists():
+        logger.warning(f"GCS copy 來源不存在: {src_path}")
+        return False
+    bucket.copy_blob(src_blob, bucket, dst_path)
+    logger.debug(f"GCS copy 完成: {src_path} -> {dst_path}")
+    return True
+
+
 async def check_gcs_connection() -> bool:
     """readiness check 用。"""
     try:

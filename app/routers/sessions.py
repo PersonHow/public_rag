@@ -502,13 +502,17 @@ async def _ingest_chunks_background(session_id: uuid.UUID) -> None:
             ]
 
             # 先清後寫：先刪該 doc 既有向量，再寫新向量（與 ingest-chunks worker 一致）
-            delete_chunks_by_doc_ids([str(did) for did in doc_ids], company_id_str)
+            # QdrantClient 是同步 blocking，用 run_in_executor 包裝避免卡住 event loop
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None, delete_chunks_by_doc_ids, [str(did) for did in doc_ids], company_id_str,
+            )
             try:
-                upsert_chunks(points)
+                await loop.run_in_executor(None, upsert_chunks, points)
             except Exception as e:
                 logger.error(f"Qdrant upsert 失敗，嘗試回滾: {e}", extra=log_extra)
                 try:
-                    delete_chunks_by_ids(chunk_ids)
+                    await loop.run_in_executor(None, delete_chunks_by_ids, chunk_ids)
                 except Exception as rollback_err:
                     logger.error(f"Qdrant rollback 失敗: {rollback_err}", extra=log_extra)
                 await _mark_session_failed(session, db, reason=f"qdrant upsert failed: {e}", log_extra=log_extra)
@@ -517,7 +521,9 @@ async def _ingest_chunks_background(session_id: uuid.UUID) -> None:
 
             total_fixed = 0
             for did in doc_ids:
-                total_fixed += normalize_product_name_by_doc(str(did), company_id_str)
+                total_fixed += await loop.run_in_executor(
+                    None, normalize_product_name_by_doc, str(did), company_id_str,
+                )
             if total_fixed > 0:
                 logger.info(
                     "product_name 正規化完成",
