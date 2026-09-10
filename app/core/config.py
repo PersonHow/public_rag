@@ -27,7 +27,12 @@ class Settings(BaseSettings):
     DEFAULT_COMPANY_ID: str = "dev-company"
 
     # Cloud Tasks worker 驗證用（必須透過環境變數設定，無安全預設值）
-    INTERNAL_TOKEN: str 
+    INTERNAL_TOKEN: str
+
+    # 前端 proxy 共享密鑰。後端 ingress 仍為 all（可被公網直連），
+    # 改以此標頭確認請求確實出自前端 nginx，擋掉繞過前端的直接呼叫。
+    # 留空 = 不啟用（本機開發用）；production 由下方 validator 強制要求。
+    PROXY_SHARED_SECRET: str = ""
 
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_db"
@@ -82,6 +87,7 @@ class Settings(BaseSettings):
         required = {
             "JWT_SECRET_KEY": self.JWT_SECRET_KEY,
             "INTERNAL_TOKEN": self.INTERNAL_TOKEN,
+            "PROXY_SHARED_SECRET": self.PROXY_SHARED_SECRET,
             "DATABASE_URL": self.DATABASE_URL,
             "GCS_PROJECT": self.GCS_PROJECT,
             "CLOUD_TASKS_PROJECT": self.CLOUD_TASKS_PROJECT,

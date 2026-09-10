@@ -9,9 +9,11 @@ Phase 5 變更：
   - 掛載 query router
 """
 import logging
+import secrets
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
@@ -60,6 +62,31 @@ async def security_headers_middleware(request, call_next):
         response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         response.headers["X-Frame-Options"] = "DENY"
     return response
+
+
+# 不經由前端 proxy、因此不能要求共享密鑰的路徑：
+#   /internal/  Cloud Tasks 直接打 WORKER_BASE_URL，另有 X-Internal-Token 把關
+#   /health /ready  Cloud Run 與監控探測
+_PROXY_GUARD_EXEMPT = ("/internal/", "/health", "/ready")
+
+
+@app.middleware("http")
+async def proxy_guard_middleware(request, call_next):
+    """確認請求出自前端 nginx，擋掉繞過前端直接打後端網址的呼叫。
+
+    後端 ingress 仍是 all，這是應用層補丁而非網路層根治：
+    密鑰存在前端容器的環境變數裡，能讀到該容器的人就能偽造。
+    要真正根治得讓後端不可被公網直連（Direct VPC egress）。
+
+    定義位置在 security_headers_middleware 之後 —— Starlette 後加的疊在最外層，
+    所以擋下的請求不會進到後續任何處理。
+    回 404 而非 403：不讓對方用狀態碼確認端點存在。
+    """
+    if settings.PROXY_SHARED_SECRET and not request.url.path.startswith(_PROXY_GUARD_EXEMPT):
+        supplied = request.headers.get("X-Proxy-Auth", "")
+        if not secrets.compare_digest(supplied.encode(), settings.PROXY_SHARED_SECRET.encode()):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    return await call_next(request)
 
 
 # ── Startup Event ─────────────────────────────────────────────────────────────
