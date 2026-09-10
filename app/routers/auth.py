@@ -29,8 +29,14 @@ COOKIE_NAME = "access_token"
 def _client_info(request: Request) -> Tuple[Optional[str], Optional[str]]:
     """取得來源 IP 與 User-Agent。
 
-    Cloud Run 前有 proxy，真實 IP 在 X-Forwarded-For 第一段；
+    Cloud Run 前有 proxy，客戶端 IP 取 X-Forwarded-For 第一段；
     本機直連則 fallback 到 request.client.host。
+
+    注意：這個值不可信。Cloud Run 是把實際連線位址「附加」在請求端送來的
+    X-Forwarded-For 之後，所以第一段是對方自己填的，實測可任意偽造。
+    login_logs.ip 因此只能當參考，不能當稽核依據；登入節流也不可只綁 IP
+    （見 services/auth.py 的 LOGIN_FAIL_MAX_PER_EMAIL）。
+    要讓這個值可信，必須先讓後端不能被直接連線。
     """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
@@ -67,6 +73,16 @@ async def login(
     try:
         result = await auth_service.login(
             db, body.email, body.password, ip=ip, user_agent=user_agent
+        )
+    except auth_service.LoginRateLimited as exc:
+        logger.warning({"level": "WARNING", "phase": "phase2", "service": "auth",
+                        "session_id": None, "company_id": None,
+                        "message": "Login blocked: too many failed attempts",
+                        "email": body.email, "reason": "rate_limited", "ip": ip})
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Please try again later.",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
         )
     except PermissionError:
         logger.warning({"level": "WARNING", "phase": "phase2", "service": "auth",

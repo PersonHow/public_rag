@@ -32,6 +32,9 @@ app = FastAPI(
     version="5.0.0",
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
+    # 只關 docs_url/redoc_url 不夠：openapi_url 保持預設時 schema 仍然公開，
+    # 等於把全部端點（含 /internal/init-superadmin）的路徑與參數格式送給對方。
+    openapi_url="/openapi.json" if settings.app_env != "production" else None,
 )
 
 _cors_origins = ["*"] if settings.app_env == "development" else [

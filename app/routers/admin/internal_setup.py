@@ -7,6 +7,7 @@ POST /internal/init-superadmin
 X-Internal-Token 驗證（與 process-document 共用同一個 token）。
 superadmin 已存在（相同 email）時回傳 400，天生幂等不需要額外關閉。
 """
+import secrets
 import uuid
 import logging
 
@@ -31,7 +32,8 @@ async def init_superadmin(
     x_internal_token: str = Header(..., alias="X-Internal-Token"),
     db: AsyncSession = Depends(get_db),
 ):
-    if x_internal_token != settings.INTERNAL_TOKEN:
+    # 常數時間比較，避免以回應時間差逐字元推測 token。
+    if not secrets.compare_digest(x_internal_token.encode(), settings.INTERNAL_TOKEN.encode()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal token")
 
     if body.role != "superadmin":

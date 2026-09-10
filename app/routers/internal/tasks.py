@@ -23,6 +23,7 @@ Phase 5 變更：
 """
 import asyncio
 import re
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -112,7 +113,9 @@ class InjectGcsPathsRequest(BaseModel):
 # ── Token 驗證 ────────────────────────────────────────────────────────────────
 
 def _verify_internal_token(x_internal_token: str = Header(..., alias="X-Internal-Token")) -> None:
-    if x_internal_token != settings.INTERNAL_TOKEN:
+    # compare_digest 為常數時間比較：`!=` 會在第一個不同的字元就返回，
+    # 攻擊者可用回應時間差逐字元推測 token。
+    if not secrets.compare_digest(x_internal_token.encode(), settings.INTERNAL_TOKEN.encode()):
         raise HTTPException(status_code=401, detail="無效的 X-Internal-Token")
 
 
