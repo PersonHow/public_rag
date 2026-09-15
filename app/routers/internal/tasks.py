@@ -21,12 +21,15 @@ Phase 4 變更：
 Phase 5 變更：
   -新增 chunk_index（enumerate 保留文件內順序）。
 """
+import asyncio
+import re
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -47,7 +50,12 @@ from app.services.ai.gemini import (
     convert_to_chunks,
 )
 from app.services.document.parser import parse_docx
-from app.services.ai.qdrant_service import delete_chunks_by_ids, upsert_chunks
+from app.services.ai.qdrant_service import (
+    delete_chunks_by_doc_ids,
+    delete_chunks_by_ids,
+    normalize_product_name_by_doc,
+    upsert_chunks,
+)
 from app.services.rules import get_latest_rules, generate_rule_version
 
 router = APIRouter(prefix="/internal/tasks", tags=["internal"])
@@ -75,6 +83,16 @@ def _get_face_suffix(face: str) -> str:
     return result or ""
 
 
+def _product_id_in_filename(pid: str, filename: str) -> bool:
+    """
+    以 token 邊界比對 product_id，避免子字串誤判導致注入錯誤的 TAP 檔。
+    例：pid 'A034-189010-1' 不應命中 'A034-189010-10' / 'A034-189010-11' 的檔名。
+    product token 由英數字與連字號組成，故 pid 前後須為字串頭尾或其他（非 token）字元。
+    """
+    pattern = r"(?<![A-Za-z0-9-])" + re.escape(pid) + r"(?![A-Za-z0-9-])"
+    return re.search(pattern, filename) is not None
+
+
 # ── Request / Response Schemas ────────────────────────────────────────────────
 
 class ProcessDocumentRequest(BaseModel):
@@ -95,7 +113,9 @@ class InjectGcsPathsRequest(BaseModel):
 # ── Token 驗證 ────────────────────────────────────────────────────────────────
 
 def _verify_internal_token(x_internal_token: str = Header(..., alias="X-Internal-Token")) -> None:
-    if x_internal_token != settings.INTERNAL_TOKEN:
+    # compare_digest 為常數時間比較：`!=` 會在第一個不同的字元就返回，
+    # 攻擊者可用回應時間差逐字元推測 token。
+    if not secrets.compare_digest(x_internal_token.encode(), settings.INTERNAL_TOKEN.encode()):
         raise HTTPException(status_code=401, detail="無效的 X-Internal-Token")
 
 
@@ -120,8 +140,9 @@ async def process_document(
     )
     session = session_result.scalar_one_or_none()
     if not session:
-        logger.error("Session 不存在", extra=log_extra)
-        return {"status": "error", "message": "Session 不存在"}
+        # 可能是上游交易尚未對本 worker 連線可見（replica lag）→ 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Session 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Session 尚不可見，稍後重試")
 
     if session.status == "failed":
         logger.info("Session 已是 failed，停止 Cloud Tasks 重試", extra=log_extra)
@@ -133,8 +154,9 @@ async def process_document(
     )
     document = doc_result.scalar_one_or_none()
     if not document:
-        logger.error("Document 不存在", extra=log_extra)
-        return {"status": "error", "message": "Document 不存在"}
+        # 同上：交易可見性延遲 → 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Document 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Document 尚不可見，稍後重試")
 
     # ── 3. 取 company + latest rules（Phase 3 新增）──────────────────────
     company_context = await _build_company_context(db, session.company_id)
@@ -190,8 +212,9 @@ async def ingest_chunks(
     )
     session = session_result.scalar_one_or_none()
     if not session:
-        logger.error("Session 不存在", extra=log_extra)
-        return {"status": "error", "message": "Session 不存在"}
+        # 交易可見性延遲 → 回非 2xx 讓 Cloud Tasks 重試
+        logger.error("Session 不存在，回 409 讓 Cloud Tasks 重試", extra=log_extra)
+        raise HTTPException(status_code=409, detail="Session 尚不可見，稍後重試")
 
     company_id_str = str(session.company_id)
     log_extra["company_id"] = company_id_str
@@ -266,18 +289,37 @@ async def ingest_chunks(
         for i, c in enumerate(chunks)
     ]
 
-    # ── 5. Upsert Qdrant（失敗時回滾已寫入的向量）────────────────────────
+    # ── 5. Upsert Qdrant（先清後寫：先刪該 doc 既有向量，再寫新向量）──────
+    # chunk_id 每次 process-document 重生成，舊向量靠新 chunk_id 蓋不掉，
+    # 必須先按 doc_id 整組清掉，否則重灌會殘留孤兒。先清後寫使向量化全冪等。
+    # QdrantClient 是同步 blocking，用 run_in_executor 包裝避免卡住 event loop
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        None, delete_chunks_by_doc_ids, [str(did) for did in doc_ids], company_id_str,
+    )
     try:
-        upsert_chunks(points)
+        await loop.run_in_executor(None, upsert_chunks, points)
     except Exception as e:
         logger.error(f"Qdrant upsert 失敗，嘗試回滾: {e}", extra=log_extra)
         try:
-            delete_chunks_by_ids(chunk_ids)
+            await loop.run_in_executor(None, delete_chunks_by_ids, chunk_ids)
         except Exception as rollback_err:
             logger.error(f"Qdrant rollback 失敗: {rollback_err}", extra=log_extra)
         await _mark_session_failed(session, db, reason=f"qdrant upsert failed: {e}", log_extra=log_extra)
         await db.flush()
         return {"status": "failed", "message": str(e)}
+
+    # ── 5.5 product_name 正規化（多數決，冪等）──────────────────────────────
+    total_fixed = 0
+    for did in doc_ids:
+        total_fixed += await loop.run_in_executor(
+            None, normalize_product_name_by_doc, str(did), company_id_str,
+        )
+    if total_fixed > 0:
+        logger.info(
+            "product_name 正規化完成",
+            extra={**log_extra, "total_fixed": total_fixed},
+        )
 
     # ── 6. 完成 ──────────────────────────────────────────────────────────
     session.status = "done"
@@ -341,11 +383,15 @@ async def inject_gcs_paths(
     )
 
     # ── 3. 取全公司 code_gcs_path = null 且有 product_id 的 chunks ──────
+    # 也包含指向 raw/ 的舊資料：raw/ 有 15 天 lifecycle，需重新注入搬遷到 converted/
     chunks_result = await db.execute(
         select(Chunk).where(
             Chunk.company_id == company_id,
             Chunk.product_id.isnot(None),
-            Chunk.code_gcs_path.is_(None),
+            or_(
+                Chunk.code_gcs_path.is_(None),
+                Chunk.code_gcs_path.like("raw/%"),
+            ),
         )
     )
     chunks = list(chunks_result.scalars().all())
@@ -356,6 +402,7 @@ async def inject_gcs_paths(
 
     # ── 4. 比對 + 注入 ────────────────────────────────────────────────────
     injected_count = 0
+    converted_path_by_doc: dict[uuid.UUID, Optional[str]] = {}
 
     for chunk in chunks:
         pid = chunk.product_id  # e.g. "A034-189010-1"
@@ -363,9 +410,9 @@ async def inject_gcs_paths(
 
         matched_doc: Optional[Document] = None
 
-        # 精準比對：product_id in filename + face suffix
+        # 精準比對：product_id（token 邊界）+ face suffix
         for filename, docs in tap_map.items():
-            if pid not in filename:
+            if not _product_id_in_filename(pid, filename):
                 continue
             if target_suffix and target_suffix in filename:
                 matched_doc = docs[0]  # 已按 created_at desc 排序，取最新
@@ -390,8 +437,12 @@ async def inject_gcs_paths(
                 )
 
         if matched_doc:
-            chunk.code_gcs_path = matched_doc.gcs_raw_path
-            injected_count += 1
+            converted_path = await _ensure_code_in_converted(
+                matched_doc, company_id_str, converted_path_by_doc, log_extra,
+            )
+            if converted_path:
+                chunk.code_gcs_path = converted_path
+                injected_count += 1
 
     await db.flush()
 
@@ -405,6 +456,44 @@ async def inject_gcs_paths(
         "total_chunks": len(chunks),
     }
 
+
+async def _ensure_code_in_converted(
+    doc: Document,
+    company_id_str: str,
+    cache: dict[uuid.UUID, Optional[str]],
+    log_extra: dict,
+) -> Optional[str]:
+    """
+    把 TAP/NC 檔從 raw/ 複製到 converted/（永久保留），回傳 converted 路徑。
+    raw/ 有 15 天 lifecycle 自動刪除，chunk.code_gcs_path 直接指向 raw/
+    會讓查詢時的簽名 URL 在 15 天後失效。
+    複製失敗（來源已被刪且 converted/ 也沒有）→ 回 None，chunk 保持原值。
+    """
+    if doc.doc_id in cache:
+        return cache[doc.doc_id]
+
+    filename = doc.gcs_raw_path.split("/")[-1]
+    dst_path = settings.gcs_converted_code_path(company_id_str, str(doc.doc_id), filename)
+    loop = asyncio.get_event_loop()
+    try:
+        copied = await loop.run_in_executor(
+            None, gcs_service.copy_object, doc.gcs_raw_path, dst_path,
+        )
+    except Exception as e:
+        logger.error(
+            f"TAP 複製到 converted/ 失敗: {e}",
+            extra={**log_extra, "doc_id": str(doc.doc_id)},
+        )
+        copied = False
+
+    result = dst_path if copied else None
+    if not copied:
+        logger.warning(
+            "TAP 原始檔已不存在且 converted/ 無備份，chunk 不注入",
+            extra={**log_extra, "doc_id": str(doc.doc_id), "src": doc.gcs_raw_path},
+        )
+    cache[doc.doc_id] = result
+    return result
 
 # ── 共用輔助函式 ──────────────────────────────────────────────────────────────
 
@@ -581,6 +670,10 @@ async def _save_chunks_to_db(
     # rule_version 從 company_context 取（Phase 3 核心接縫點）
     rule_version = company_context["rule_version"]
     session.rule_version_used = rule_version
+
+    # 冪等保護：Cloud Tasks 重試會重跑整個 task，先刪掉此 doc 既有 chunks 再寫，避免重複 INSERT
+    await db.execute(delete(Chunk).where(Chunk.doc_id == document.doc_id))
+    await db.flush()
 
     for idx, chunk_output in enumerate(chunk_outputs):
         chunk = Chunk(

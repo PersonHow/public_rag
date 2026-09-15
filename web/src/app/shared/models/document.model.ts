@@ -28,6 +28,7 @@ export interface Chunk {
   // 結構欄位（v2 新增，若原本沒有需補上）
   material: string | null;
   dimensions: string | null;
+  specs: string | null;
   situation: string | null;
   action: string | null;
   reason: string | null;
@@ -49,6 +50,28 @@ export interface SessionChunksResponse {
   chunks: Chunk[];
   chunk_count: number;
 }
+
+/**
+ * PATCH /sessions/{id}/chunks/{chunk_id} 的 request body。
+ * 對應後端 app/schemas/chunk.py ChunkPatch（extra=forbid）：
+ *   只允許這些欄位，其他傳上去後端會 422。
+ */
+export type EditableChunkField =
+  | 'product_name'
+  | 'product_id'
+  | 'material'
+  | 'dimensions'
+  | 'specs'
+  | 'situation'
+  | 'action'
+  | 'reason'
+  | 'applies_to'
+  | 'case_id'
+  | 'doc_type'
+  | 'face'
+  | 'embed_text';
+
+export type ChunkPatch = Partial<Pick<Chunk, EditableChunkField>>;
 
 // ── Phase 5：整體預覽 ──────────────────────────────────────
 export interface FullTextChunk {

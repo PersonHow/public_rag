@@ -18,7 +18,7 @@ from typing import Optional
 import google.auth
 import google.auth.transport.requests
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -61,10 +61,26 @@ async def _get_access_token() -> str:
     return await loop.run_in_executor(None, _refresh)
 
 
+def _is_retryable_embedding_error(exc: BaseException) -> bool:
+    """
+    只對暫時性錯誤重試：連線/逾時，以及 HTTP 429 / 5xx。
+    不可重試的 4xx（400/401/403/404 等）直接失敗，避免無謂的指數退避。
+    """
+    if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        return code == 429 or code >= 500
+    return False
+
+
+_EMBEDDING_DIM = 768
+
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=8),
-    retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
+    retry=retry_if_exception(_is_retryable_embedding_error),
 )
 async def embed_text(
     text: str,
@@ -102,7 +118,17 @@ async def embed_text(
             response.raise_for_status()
 
     data = response.json()
-    return data["predictions"][0]["embeddings"]["values"]
+    try:
+        vector = data["predictions"][0]["embeddings"]["values"]
+    except (KeyError, IndexError, TypeError) as e:
+        raise ValueError(f"Vertex embedding 回應格式非預期: {e}") from e
+
+    if len(vector) != _EMBEDDING_DIM:
+        # 維度不符會在寫入 Qdrant 時才爆，提早在邊界擋下
+        raise ValueError(
+            f"Embedding 維度不符：預期 {_EMBEDDING_DIM}，實得 {len(vector)}"
+        )
+    return vector
 
 
 async def embed_texts(

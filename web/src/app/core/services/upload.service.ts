@@ -9,40 +9,48 @@ import { CompanyContextService } from '../services/company-context.service';
 export class UploadService {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
-  private readonly context = inject(CompanyContextService);
+
+  // private readonly context → readonly context
+  readonly context = inject(CompanyContextService);
+  
   readonly queue = signal<UploadJob[]>([]);
 
   upload(file: File): void {
-    const job: UploadJob = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      pct: 0,
-      status: 'uploading',
-    };
-    this.queue.update(q => [...q, job]);
+  const job: UploadJob = {
+    id: crypto.randomUUID(),
+    name: file.name,
+    size: file.size,
+    pct: 0,
+    status: 'uploading',
+  };
+  this.queue.update(q => [...q, job]);
 
-    const form = new FormData();
-    form.append('file', file);
+  const form = new FormData();
+  form.append('file', file);
 
-    this.http.post<UploadResponse>(`${environment.apiUrl}/upload`, form, {
-      reportProgress: true,
-      observe: 'events',
-    }).subscribe({
-      next: event => {
-        if (event.type === HttpEventType.UploadProgress && event.total) {
-          const pct = Math.round(100 * event.loaded / event.total);
-          this._update(job.id, { pct });
-        } else if (event.type === HttpEventType.Response && event.body) {
-          this._update(job.id, { pct: 100, status: 'done', sessionId: event.body.session_id });
-        }
-      },
-      error: err => {
-        const msg = err?.error?.detail ?? '上傳失敗';
-        this._update(job.id, { status: 'error', errorMsg: msg });
-      },
-    });
-  }
+  const activeCompany = this.context.activeCompanyId();
+  const url = activeCompany
+    ? `${environment.apiUrl}/upload?company_id=${activeCompany}`
+    : `${environment.apiUrl}/upload`;
+
+  this.http.post<UploadResponse>(url, form, {
+    reportProgress: true,
+    observe: 'events',
+  }).subscribe({
+    next: event => {
+      if (event.type === HttpEventType.UploadProgress && event.total) {
+        const pct = Math.round(100 * event.loaded / event.total);
+        this._update(job.id, { pct });
+      } else if (event.type === HttpEventType.Response && event.body) {
+        this._update(job.id, { pct: 100, status: 'done', sessionId: event.body.session_id });
+      }
+    },
+    error: err => {
+      const msg = err?.error?.detail ?? '上傳失敗';
+      this._update(job.id, { status: 'error', errorMsg: msg });
+    },
+  });
+}
 
   removeJob(id: string): void {
     this.queue.update(q => q.filter(j => j.id !== id));

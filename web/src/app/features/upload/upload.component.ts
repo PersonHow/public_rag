@@ -1,16 +1,17 @@
 import { Component, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { UploadService } from '../../core/services/upload.service';
 import { UploadJob } from '../../shared/models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StepperComponent } from '../../shared/components/stepper/stepper.component';
 import { PageHeadComponent } from '../../shared/components/page-head/page-head.component';
+import { ButtonComponent } from '../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [RouterLink, StepperComponent, PageHeadComponent],
+  imports: [RouterLink, StepperComponent, PageHeadComponent, ButtonComponent],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.scss',
 })
@@ -18,6 +19,7 @@ export class UploadComponent {
   readonly uploadSvc = inject(UploadService);
   private readonly toast  = inject(ToastService);
   private readonly auth   = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly isDragOver = signal(false);
   readonly queue = this.uploadSvc.queue;
@@ -25,6 +27,18 @@ export class UploadComponent {
   readonly uploadingCount = computed(() => this.queue().filter(j => j.status === 'uploading').length);
   readonly doneCount      = computed(() => this.queue().filter(j => j.status === 'done').length);
   readonly errorCount     = computed(() => this.queue().filter(j => j.status === 'error').length);
+
+  /** 已完成上傳、可預覽的 session id（依加入順序）。 */
+  readonly doneSessionIds = computed(() =>
+    this.queue().filter(j => j.status === 'done' && j.sessionId).map(j => j.sessionId as string)
+  );
+
+  /** 一次預覽這批所有已上傳檔案。 */
+  previewBatch(): void {
+    const ids = this.doneSessionIds();
+    if (ids.length === 0) return;
+    this.router.navigate(['/preview', ids[0]], { queryParams: { batch: ids.join(',') } });
+  }
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -42,18 +56,22 @@ export class UploadComponent {
   }
 
   uploadFiles(files: FileList): void {
-    if (!this.auth.isAdmin()) {
-      this.toast.error('只有管理員可以上傳文件');
+  if (!this.auth.isAdmin()) {
+    this.toast.error('只有管理員可以上傳文件');
+    return;
+  }
+  if (this.auth.isSuperAdmin() && !this.uploadSvc.context.activeCompanyId()) {
+    this.toast.error('請先在上方選擇目標租戶');
+    return;
+  }
+  Array.from(files).forEach(f => {
+    if (f.size > 50 * 1024 * 1024) {
+      this.toast.error(`${f.name} 超過 50MB 限制`);
       return;
     }
-    Array.from(files).forEach(f => {
-      if (f.size > 50 * 1024 * 1024) {
-        this.toast.error(`${f.name} 超過 50MB 限制`);
-        return;
-      }
-      this.uploadSvc.upload(f);
-    });
-  }
+    this.uploadSvc.upload(f);
+  });
+}
 
   fileExt(name: string): string {
     const ext = name.split('.').pop()?.toLowerCase() ?? '';

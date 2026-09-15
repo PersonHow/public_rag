@@ -36,12 +36,12 @@
 }
 
 .doc-name {
-  display: block; font-family: var(--font-mono); font-size: 11px;
+  display: block; font-size: 11px;
   font-weight: 700; color: var(--ink); word-break: break-all;
 }
 
 .doc-meta {
-  display: block; font-family: var(--font-mono); font-size: 10px;
+  display: block; font-size: 10px;
   color: var(--muted); margin-top: 2px;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .view-tab {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   letter-spacing: .08em; padding: 8px 20px;
   border: 2px solid var(--ink); border-bottom: none;
   background: var(--bg-3); color: var(--muted);
@@ -103,7 +103,7 @@
   &.failed    { border-color: var(--rust);  box-shadow: 3px 3px 0 var(--rust);  color: var(--rust); }
   &.processing {
     border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink);
-    color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+    color: var(--muted); font-size: 12px;
   }
 }
 
@@ -120,4 +120,32 @@
   padding: 12px 16px; border: 2px solid var(--rust);
   background: rgba(196,69,54,.06); color: var(--rust); font-size: 13px;
   margin-bottom: 16px;
+}
+
+// ── 批次切換器（批次預覽時，於檔案之間切換）─────────────────
+.batch-switcher {
+  border: 2px solid var(--ink); background: var(--bg-2);
+  box-shadow: 5px 5px 0 var(--rust); padding: 12px 16px; margin-bottom: 18px;
+
+  .bs-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+
+  .bs-list { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .bs-item {
+    flex: 0 0 auto; cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: 10px;
+    border: 2px solid var(--line); padding: 8px 12px;
+    background: var(--bg-3); transition: border-color .12s, background .12s, box-shadow .12s;
+    max-width: 320px;
+
+    &:hover { border-color: var(--ink); background: var(--bg-2); }
+    &.active { border-color: var(--rust); box-shadow: 3px 3px 0 var(--rust); background: var(--bg-2); }
+  }
+
+  .bs-name {
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+  }
 }

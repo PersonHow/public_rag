@@ -40,4 +40,4 @@ tenacity==9.0.0
 python-json-logger==2.0.7
 
 # Phase 4 — 向量寫入
-qdrant-client==1.12.1
+qdrant-client[grpc]==1.12.1

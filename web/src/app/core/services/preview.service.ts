@@ -1,10 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, interval, switchMap, takeWhile } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   SessionStatusResponse, SessionChunksResponse,
-  Document, Chunk, ConfirmResponse, FullTextResponse
+  Document, Chunk, ChunkPatch, ConfirmResponse, FullTextResponse
 } from '../../shared/models';
 
 @Injectable({ providedIn: 'root' })
@@ -42,8 +42,16 @@ export class PreviewService {
     this.documents().filter(d => d.has_low_confidence).length
   );
 
+  /** 是否全為不產生 chunks 的程式/圖檔類型（tap / nc / dxf / unknown） */
+  readonly isCodeFileOnly = computed(() => {
+    const docs = this.documents();
+    if (docs.length === 0) return false;
+    return docs.every(d => ['tap', 'nc', 'dxf', 'unknown'].includes(d.doc_type));
+  });
+
   readonly canConfirm = computed(() =>
-    this.session()?.status === 'pending_preview' && this.chunks().length > 0
+    this.session()?.status === 'pending_preview' &&
+    (this.chunks().length > 0 || this.isCodeFileOnly())
   );
 
   readonly filteredChunks = computed(() => {
@@ -83,6 +91,24 @@ export class PreviewService {
     await this.tryLoadChunks(sessionId);
   }
 
+  /**
+   * 靜默刷新（輪詢用）：不翻轉 loading 旗標，避免整頁 spinner 每次輪詢都閃爍。
+   * 失敗時靜默忽略，不覆蓋既有畫面。
+   */
+  async refreshSilent(sessionId: string): Promise<void> {
+    try {
+      const status = await firstValueFrom(
+        this.http.get<SessionStatusResponse>(
+          `${environment.apiUrl}/sessions/${sessionId}`
+        )
+      );
+      this.session.set(status);
+    } catch {
+      return;
+    }
+    await this.tryLoadChunks(sessionId);
+  }
+
   // ── 嘗試撈 chunks ────────────────────────────────────
   async tryLoadChunks(sessionId: string): Promise<void> {
     try {
@@ -119,24 +145,62 @@ export class PreviewService {
     }
   }
 
-  // ── Polling ──────────────────────────────────────────
-  startPolling(sessionId: string) {
-    return interval(3000).pipe(
-      switchMap(() =>
-        this.http.get<SessionStatusResponse>(
-          `${environment.apiUrl}/sessions/${sessionId}`
+  // ── v2：預覽階段 inline 編輯單一 chunk ─────────────────
+  async patchChunk(sessionId: string, chunkId: string, patch: ChunkPatch): Promise<Chunk> {
+    const updated = await firstValueFrom(
+      this.http.patch<Chunk>(
+        `${environment.apiUrl}/sessions/${sessionId}/chunks/${chunkId}`,
+        patch
+      )
+    );
+    this.chunks.update(arr =>
+      arr.map(c => c.chunk_id === chunkId ? { ...c, ...updated } : c)
+    );
+    // 同步整體預覽快取，讓 fulltext-view 重新分組
+    // Chunk / FullTextChunk 的 optionality 不同（null vs undefined），用 unknown 轉接
+    this.fullText.update(ft => ft ? {
+      ...ft,
+      chunks: ft.chunks.map(c =>
+        c.chunk_id === chunkId
+          ? ({ ...c, ...updated } as unknown as typeof c)
+          : c
+      ),
+    } : ft);
+    return updated;
+  }
+
+  // ── 批次預覽用 helpers ────────────────────────────────
+  /** 查單一 session 狀態（含 filename），供批次切換器顯示。 */
+  async fetchStatus(sessionId: string): Promise<SessionStatusResponse> {
+    return firstValueFrom(
+      this.http.get<SessionStatusResponse>(`${environment.apiUrl}/sessions/${sessionId}`)
+    );
+  }
+
+  /** 確認前檢查 session 是否解析完成可確認（有 chunks 或純程式/圖檔）。 */
+  async checkReady(sessionId: string): Promise<boolean> {
+    try {
+      const data = await firstValueFrom(
+        this.http.get<SessionChunksResponse>(
+          `${environment.apiUrl}/sessions/${sessionId}/chunks`
         )
-      ),
-      takeWhile(
-        s => s.status === 'pending_preview' && this.chunks().length === 0,
-        true
-      ),
-    ).subscribe(async s => {
-      this.session.set(s);
-      if (this.chunks().length === 0 && s.status === 'pending_preview') {
-        await this.tryLoadChunks(sessionId);
-      }
-    });
+      );
+      if (data.status !== 'pending_preview') return false;
+      if (data.chunks.length > 0) return true;
+      return data.documents.length > 0 &&
+        data.documents.every(d => ['tap', 'nc', 'dxf', 'unknown'].includes(d.doc_type));
+    } catch {
+      return false;
+    }
+  }
+
+  /** 只送出 confirm，不動目前 active session 狀態（批次確認非 active 的 session 用）。 */
+  async confirmRaw(sessionId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post<ConfirmResponse>(
+        `${environment.apiUrl}/sessions/${sessionId}/confirm`, {}
+      )
+    );
   }
 
   async confirm(sessionId: string): Promise<ConfirmResponse> {

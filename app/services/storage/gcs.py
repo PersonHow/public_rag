@@ -51,9 +51,11 @@ async def download_bytes(gcs_path: str, timeout_sec: int = 30) -> bytes:
     blob = bucket.blob(gcs_path)
     loop = asyncio.get_running_loop()
     try:
+        # 把 timeout 一併傳給底層 HTTP 請求：asyncio.wait_for 只會取消 await，
+        # 真正在背景跑的 worker thread 不會被中斷；交給 GCS client 自行逾時才會真正放掉連線。
         return await asyncio.wait_for(
-            loop.run_in_executor(None, blob.download_as_bytes),
-            timeout=timeout_sec,
+            loop.run_in_executor(None, lambda: blob.download_as_bytes(timeout=timeout_sec)),
+            timeout=timeout_sec + 5,
         )
     except asyncio.TimeoutError:
         raise TimeoutError(f"GCS 下載逾時（{timeout_sec}s）: {gcs_path}")
@@ -72,6 +74,24 @@ async def download_json(gcs_path: str) -> Any:
 
 def get_gcs_uri(gcs_path: str) -> str:
     return f"gs://{settings.GCS_BUCKET_NAME}/{gcs_path}"
+
+
+def copy_object(src_path: str, dst_path: str) -> bool:
+    """
+    Server-side 複製 GCS 物件（同步 blocking，async context 請用 run_in_executor 包裝）。
+    冪等：目標已存在直接回 True；來源不存在（如已被 lifecycle 刪除）回 False。
+    """
+    bucket = _get_bucket()
+    dst_blob = bucket.blob(dst_path)
+    if dst_blob.exists():
+        return True
+    src_blob = bucket.blob(src_path)
+    if not src_blob.exists():
+        logger.warning(f"GCS copy 來源不存在: {src_path}")
+        return False
+    bucket.copy_blob(src_blob, bucket, dst_path)
+    logger.debug(f"GCS copy 完成: {src_path} -> {dst_path}")
+    return True
 
 
 async def check_gcs_connection() -> bool:

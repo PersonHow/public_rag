@@ -42,6 +42,8 @@
 }
 
 // ── Typography ────────────────────────────────────────────
+// 單純等寬字體請用全域 .mono utility class（_global.scss）；
+// 以下為含字級/間距/大小寫的複合樣式，供全域 label/tag 類使用。
 @mixin mono-label {
   font-family: var(--font-mono);
   font-size: 10px;

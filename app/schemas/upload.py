@@ -21,6 +21,7 @@ class SessionStatusResponse(BaseModel):
     status: str
     fail_reason: str | None = None
     preview_confirmed: bool
+    filename: str | None = None
 
 
 class ConfirmResponse(BaseModel):

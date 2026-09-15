@@ -51,7 +51,7 @@
 .brand-row.big { display: flex; gap: 16px; align-items: flex-start; }
 
 .hero-h1 {
-  font-family: var(--font-mono); font-weight: 700;
+  font-weight: 700;
   font-size: clamp(38px, 4.6vw, 64px);
   line-height: 1; letter-spacing: -.02em; color: var(--ink); margin: 0;
 
@@ -81,7 +81,7 @@
 .px-frame-stamp {
   position: absolute; top: -12px; left: 24px;
   background: var(--ink); color: var(--cream);
-  font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
   padding: 3px 10px; text-transform: uppercase;
 }
 
@@ -91,13 +91,12 @@
   width: 100%; padding: 10px 12px; font-size: 13px;
   border: 1px solid var(--ink); background: var(--bg-2);
   box-shadow: inset 2px 2px 0 rgba(40,61,59,.06);
-  font-family: var(--font-mono);
 
   &:focus { border-color: var(--rust); outline: none; box-shadow: 0 0 0 2px var(--rust); }
 }
 
 .login-error {
-  color: var(--rust); font-family: var(--font-mono); font-size: 12px; margin-bottom: 10px;
+  color: var(--rust); font-size: 12px; margin-bottom: 10px;
 }
 
 @media (max-width: 880px) {

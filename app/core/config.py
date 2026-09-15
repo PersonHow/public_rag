@@ -27,7 +27,12 @@ class Settings(BaseSettings):
     DEFAULT_COMPANY_ID: str = "dev-company"
 
     # Cloud Tasks worker 驗證用（必須透過環境變數設定，無安全預設值）
-    INTERNAL_TOKEN: str 
+    INTERNAL_TOKEN: str
+
+    # 前端 proxy 共享密鑰。後端 ingress 仍為 all（可被公網直連），
+    # 改以此標頭確認請求確實出自前端 nginx，擋掉繞過前端的直接呼叫。
+    # 留空 = 不啟用（本機開發用）；production 由下方 validator 強制要求。
+    PROXY_SHARED_SECRET: str = ""
 
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_db"
@@ -66,8 +71,13 @@ class Settings(BaseSettings):
     # ── Qdrant（Phase 4）────────────────────────────────
     QDRANT_HOST: str = ""
     QDRANT_PORT: int = 6333
+    QDRANT_GRPC_PORT: int = 6334
     QDRANT_API_KEY: str = ""  # 無 API Key 留空字串
     QDRANT_COLLECTION_NAME: str = ""
+
+    # ── CORS ────────────────────────────────
+    # 逗號分隔字串，例如 "https://a.com,https://b.com" 或 "*"
+    CORS_ORIGINS: str = "*"
 
     @model_validator(mode="after")
     def _validate_required_in_production(self) -> "Settings":
@@ -77,6 +87,7 @@ class Settings(BaseSettings):
         required = {
             "JWT_SECRET_KEY": self.JWT_SECRET_KEY,
             "INTERNAL_TOKEN": self.INTERNAL_TOKEN,
+            "PROXY_SHARED_SECRET": self.PROXY_SHARED_SECRET,
             "DATABASE_URL": self.DATABASE_URL,
             "GCS_PROJECT": self.GCS_PROJECT,
             "CLOUD_TASKS_PROJECT": self.CLOUD_TASKS_PROJECT,
@@ -119,6 +130,14 @@ class Settings(BaseSettings):
     def gcs_converted_path(self, company_id: str, session_id: str) -> str:
         """converted/{company_id}/{session_id}/chunks.json"""
         return f"converted/{company_id}/{session_id}/chunks.json"
+
+    def gcs_converted_code_path(self, company_id: str, doc_id: str, filename: str) -> str:
+        """converted/{company_id}/code/{doc_id}/{filename}
+
+        TAP/NC 檔的永久保存位置。raw/ 有 15 天 lifecycle 自動刪除，
+        chunk.code_gcs_path 若指向 raw/ 會在 15 天後產出失效的簽名 URL，
+        故 inject-gcs-paths 時複製到 converted/（永久保留）。"""
+        return f"converted/{company_id}/code/{doc_id}/{filename}"
 
     model_config = ConfigDict(
         env_file=".env",

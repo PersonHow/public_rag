@@ -2,12 +2,32 @@
 
 <app-page-head title="預覽資料">
   <p subtitle style="color:var(--muted);font-size:13px;margin:0">
-    Session: <span style="font-family:var(--font-mono)">{{ sessionId }}</span>
+    Session: <span style="font-family:var(--font-mono)">{{ activeSessionId() }}</span>
   </p>
   <div actions class="row">
     <app-status-badge [label]="statusLabel()" [color]="statusColor()" />
   </div>
 </app-page-head>
+
+@if (isBatch()) {
+  <div class="batch-switcher">
+    <div class="bs-head">
+      <span class="px-label" style="margin:0">// 本批檔案</span>
+      <span class="px-mono" style="font-size:11px;color:var(--muted)">
+        {{ batchFiles().length }} 份 · 待確認 {{ pendingBatchCount() }}
+      </span>
+    </div>
+    <div class="bs-list">
+      @for (f of batchFiles(); track f.sessionId) {
+        <button class="bs-item" [class.active]="f.sessionId === activeSessionId()"
+                (click)="selectSession(f.sessionId)">
+          <span class="bs-name">{{ f.filename || f.sessionId }}</span>
+          <app-status-badge [label]="statusText(f.status)" [color]="statusColorFor(f.status)" />
+        </button>
+      }
+    </div>
+  </div>
+}
 
 @if (svc.loading()) {
   <app-empty-state [loading]="true" />
@@ -32,7 +52,7 @@
     </div>
   }
   @if (isWorkerRunning()) {
-    <div class="status-bar processing">
+    <div class="status-bar processing mono">
       <span class="spinner"></span>
       模型解析中，通常需要 10～30 秒，請稍候…
     </div>
@@ -58,14 +78,14 @@
       <div class="doc-list-h">
         <div class="doc-item" [class.active]="!svc.selectedDocId()"
              (click)="selectDoc(null)">
-          <span class="doc-name">全部文件</span>
-          <span class="doc-meta">{{ svc.chunks().length }} chunks</span>
+          <span class="doc-name mono">全部文件</span>
+          <span class="doc-meta mono">{{ svc.chunks().length }} chunks</span>
         </div>
         @for (doc of svc.documents(); track doc.doc_id) {
           <div class="doc-item" [class.active]="svc.selectedDocId() === doc.doc_id"
                (click)="selectDoc(doc.doc_id)">
-            <span class="doc-name">{{ doc.filename }}</span>
-            <span class="doc-meta doc-type">{{ doc.doc_type | uppercase }}</span>
+            <span class="doc-name mono">{{ doc.filename }}</span>
+            <span class="doc-meta doc-type mono">{{ doc.doc_type | uppercase }}</span>
           </div>
         }
       </div>
@@ -74,11 +94,11 @@
     <!-- ── View tabs（選定特定文件後才顯示）── -->
     @if (showViewTabs()) {
       <div class="view-tabs">
-        <button class="view-tab" [class.active]="viewMode() === 'card'"
+        <button class="view-tab mono" [class.active]="viewMode() === 'card'"
                 (click)="viewMode.set('card')">
           ■ 卡片模式
         </button>
-        <button class="view-tab" [class.active]="viewMode() === 'full'"
+        <button class="view-tab mono" [class.active]="viewMode() === 'full'"
                 (click)="viewMode.set('full')">
           ≡ 整體預覽
         </button>
@@ -93,7 +113,10 @@
       <div class="card-wrap">
         <div class="card-list">
           @for (group of groupedChunks(); track group.productName) {
-            <app-chunk-card [group]="group" />
+            <app-chunk-card
+              [group]="group"
+              [sessionId]="activeSessionId()"
+              [editable]="canEditChunks()" />
           }
           @if (groupedChunks().length === 0) {
             <app-empty-state message="無符合條件的 chunks" />
@@ -115,7 +138,10 @@
       }
 
       @if (!svc.fullTextLoading() && svc.fullText(); as ft) {
-        <app-fulltext-view [fullText]="ft" />
+        <app-fulltext-view
+          [fullText]="ft"
+          [sessionId]="activeSessionId()"
+          [editable]="canEditChunks()" />
       }
 
       @if (!svc.fullTextLoading() && !svc.fullText()) {
@@ -123,19 +149,43 @@
       }
     }
 
-    <!-- ── Confirm bar ── -->
-    @if (svc.canConfirm() && isAdmin()) {
-      <div class="confirm-bar">
-        <div class="info">
-          <span class="px-stamp">審視完畢？</span>
-          <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
-        </div>
-        <button class="btn ghost sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</button>
-        <button class="btn rust" [disabled]="actionLoading()" (click)="onConfirm()">
-          {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
-        </button>
-      </div>
-    }
+  }
 
+  <!-- ── 純程式檔（tap/nc/dxf/unknown）無 chunks 時的提示 ── -->
+  @if (svc.isCodeFileOnly() && status() === 'pending_preview') {
+    <app-empty-state message="此 Session 僅含程式／圖檔（不產生 chunks），可直接確認歸屬。" />
+  }
+
+  <!-- ── Confirm bar（單筆預覽；移到 chunks 區塊外，純程式檔也能確認）── -->
+  @if (!isBatch() && svc.canConfirm() && isAdmin()) {
+    <div class="confirm-bar">
+      <div class="info">
+        <span class="px-stamp">審視完畢？</span>
+        <span style="color:var(--muted);font-size:12px">確認後 Chunks 將進入向量化 Pipeline，無法撤回。</span>
+      </div>
+      <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕</app-button>
+      <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirm()">
+        {{ actionLoading() ? '處理中…' : '✓ 確認資料歸屬' }}
+      </app-button>
+    </div>
+  }
+
+  <!-- ── 批次確認 bar（批次預覽時）── -->
+  @if (isBatch() && isAdmin() && pendingBatchCount() > 0) {
+    <div class="confirm-bar">
+      <div class="info">
+        <span class="px-stamp">批次確認</span>
+        <span style="color:var(--muted);font-size:12px">
+          這批還有 {{ pendingBatchCount() }} 份待確認，僅會確認已解析完成的檔案，無法撤回。
+        </span>
+      </div>
+      @if (svc.canConfirm()) {
+        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onReject()">拒絕此份</app-button>
+        <app-button variant="ghost" size="sm" [disabled]="actionLoading()" (click)="onConfirm()">確認此份</app-button>
+      }
+      <app-button variant="rust" [disabled]="actionLoading()" (click)="onConfirmAll()">
+        {{ actionLoading() ? '處理中…' : '✓ 全部確認 (' + pendingBatchCount() + ')' }}
+      </app-button>
+    </div>
   }
 }

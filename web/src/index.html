@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <app-root></app-root>
+  <!-- 佔位符由 nginx 於回應時代換成該請求的 CSP nonce，見 nginx.conf 的 sub_filter。
+       ng serve 不經 nginx 也不送 CSP，佔位符原樣留著不影響本機開發。 -->
+  <app-root ngCspNonce="__CSP_NONCE__"></app-root>
 </body>
 </html>
