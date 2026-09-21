@@ -201,7 +201,8 @@ Skvalves_Demo/
 │           └── features/              # 功能頁面（login, hub, upload, query...）
 │
 ├── dev_trigger.py              # 本機手動觸發 Cloud Tasks worker 的開發工具
-└── setup_gcs_lifecycle.py      # GCS lifecycle rule 設定腳本（15 天自動刪除 processed/）
+├── setup_gcs_lifecycle.py      # GCS lifecycle rule 設定腳本（15 天自動刪除 processed/）
+└── setup_tls_loadbalancer.sh   # 前端對外負載平衡器建置與驗證（TLS 加密套件修復）
 ```
 
 ---
@@ -219,7 +220,11 @@ Skvalves_Demo/
 | **Qdrant 主機** | `34.81.227.217:6333`（GCE VM） |
 | **Artifact Registry** | `asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/` |
 | **後端 Cloud Run 服務** | `public-rag-backend` |
-| **前端 Cloud Run 服務** | `public-rag-frontend` |
+| **前端 Cloud Run 服務** | `public-rag-frontend`（ingress 限 LB，不對外） |
+| **前端對外網址** | `https://ai-agent.onceagain.tw` |
+| **負載平衡器靜態 IP** | `136.68.229.202`（`rag-fe-ip`） |
+| **SSL policy** | `tls-restricted`（RESTRICTED profile，最低 TLS 1.2） |
+| **網域註冊商 / DNS** | 網路中文（`onceagain.tw`，DNS 更新需 12–24 小時） |
 
 ### 使用的 GCP 服務
 
@@ -229,6 +234,7 @@ Skvalves_Demo/
 - **Cloud Tasks** — 非同步文件處理任務佇列
 - **Vertex AI** — Gemini Flash 文件解析 + gemini-embedding-001 向量化
 - **Artifact Registry** — Docker image 儲存庫
+- **Cloud Load Balancing** — 前端對外入口，終結 TLS 並套用加密套件政策
 
 ---
 
@@ -546,31 +552,97 @@ gcloud config set project shaped-totem-468106-g3
 # 2. Build & Push Docker image
 gcloud builds submit --tag asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/backend
 
-# 3. 部署到 Cloud Run
+# 3. 部署到 Cloud Run（重新部署既有服務：只給 --image）
 gcloud run deploy public-rag-backend \
   --image asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/backend \
   --region asia-east1 \
-  --platform managed \
-  --add-cloudsql-instances shaped-totem-468106-g3:asia-east1:first-postgre-sql \
-  --set-env-vars app_env=production,...
+  --platform managed
 ```
+
+> ⚠️ **不要在重新部署時加 `--set-env-vars`。** 它是「整批取代」語意，會把服務上現有的
+> 全部環境變數（`DATABASE_URL`、`JWT_SECRET_KEY`、`INTERNAL_TOKEN`、`QDRANT_*` 等）
+> 一次清空，服務會直接起不來。
+>
+> 只給 `--image` 時，Cloud Run 會沿用上一版 revision 的環境變數與 Cloud SQL 掛載。
+> 需要修改**單一**變數時用 `--update-env-vars`；若變數值本身含逗號（例如 `CORS_ORIGINS`
+> 有多個 origin），要用 `^@^` 前綴改分隔符：
+>
+> ```bash
+> gcloud run services update public-rag-backend --region asia-east1 \
+>   --update-env-vars="^@^CORS_ORIGINS=https://ai-agent.onceagain.tw,https://其他來源"
+> ```
 
 ### 前端部署
 
+前端不直接對外，流量路徑為：
+
+```
+瀏覽器 → ai-agent.onceagain.tw → 外部應用程式負載平衡器 → Cloud Run (public-rag-frontend)
+```
+
+負載平衡器綁定的是**服務**而非特定 revision，因此部署新版本後會自動生效，
+**不需要改動 LB、DNS 或憑證**。
+
 ```bash
-# 進入 web/ 目錄
 cd web
 
-# Build & Push
-gcloud builds submit --tag asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/frontend
+# Build & Push（或用 gcloud builds submit 一次完成）
+docker build -t asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/frontend .
+docker push asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/frontend
 
-# 部署
+# 部署（重新部署既有服務：只給 --image）
 gcloud run deploy public-rag-frontend \
   --image asia-east1-docker.pkg.dev/shaped-totem-468106-g3/public-rag/frontend \
   --region asia-east1 \
-  --platform managed \
-  --allow-unauthenticated
+  --platform managed
 ```
+
+也可以在 GCP 主控台用「編輯並部署新修訂版本」，表單會沿用現有設定。
+
+#### 部署時的三個地雷
+
+1. **不要加 `--ingress`，主控台的「網路 → 輸入連線控制」也不要動。**
+   現值為 `internal-and-cloud-load-balancing`。改回 `all` 會讓舊的 `*.run.app`
+   網址復活、TLS 加密套件修正失效，而且部署仍顯示成功、沒有任何警告。
+
+2. **不要用 `--set-env-vars`。** 前端有 `BACKEND_HOST` 與 `PROXY_SHARED_SECRET` 兩個變數，
+   被清空後 `nginx.conf` 的 `envsubst` 會代換出空字串，`/api/` 全數失效，
+   但首頁仍正常顯示——這種壞法不容易第一時間發現。
+
+3. **改動 `web/src/index.html` 或 Angular 建置設定時，確認 `__CSP_NONCE__` 佔位符仍在。**
+   CSP nonce 機制依賴它出現在建置產物中（正常為 2 處：Angular 內嵌字型的 `<style>`
+   與 `<app-root ngCspNonce>`）。消失會導致樣式全部無法載入。
+
+#### 部署後驗證
+
+```bash
+bash setup_tls_loadbalancer.sh verify
+```
+
+會檢查弱加密套件是否仍被拒絕、`/api/` 是否可達、CSP nonce 的回應標頭與 HTML 是否一致。
+全部通過才算部署成功。
+
+> **注意：** Cloud Run 主控台頁面上方顯示的網址仍是舊的 `*.run.app`，點擊會得到 404。
+> 這是正常現象（主控台不知道前面有 LB），實際網址為 `https://ai-agent.onceagain.tw`。
+
+### 前端對外入口（負載平衡器）
+
+Cloud Run 的 TLS 由 Google Front End 終結，租戶無法調整加密套件，
+因此改由自建的外部應用程式負載平衡器承接對外流量並套用 SSL policy。
+建置、驗證與回滾都由 `setup_tls_loadbalancer.sh` 處理，一般部署不需要碰。
+
+| 元件 | 名稱 |
+|------|------|
+| 靜態 IP | `rag-fe-ip`（`136.68.229.202`） |
+| Serverless NEG | `rag-fe-neg` → `public-rag-frontend` |
+| Backend service | `rag-fe-bs` |
+| URL map | `rag-fe-map`（HTTPS）、`rag-fe-redirect-map`（HTTP 301 轉址） |
+| SSL policy | `tls-restricted`（RESTRICTED、最低 TLS 1.2） |
+| 憑證 | `rag-fe-cert`（Google 託管，自動續約） |
+
+> ⚠️ **憑證自動續約的前提**：`ai-agent.onceagain.tw` 的 A 記錄必須持續指向
+> `136.68.229.202`。若該筆 DNS 記錄被移除或網域未續費，續約會靜默失敗，
+> 憑證到期後全站將出現憑證錯誤。
 
 ### Cloud Run 後端必要環境變數
 
@@ -587,7 +659,7 @@ gcloud run deploy public-rag-frontend \
 | `VERTEX_AI_PROJECT` | `shaped-totem-468106-g3` |
 | `QDRANT_HOST` | `34.81.227.217` |
 | `QDRANT_COLLECTION_NAME` | `public_rag_chunks` |
-| `CORS_ORIGINS` | 前端 Cloud Run URL（例：`https://public-rag-frontend-550905952099.asia-east1.run.app`） |
+| `CORS_ORIGINS` | 前端對外網址（`https://ai-agent.onceagain.tw`） |
 
 > **注意：** `CORS_ORIGINS` 為逗號分隔字串，可填多個 origin。
 
@@ -609,11 +681,13 @@ gcloud auth application-default login
 
 ### Q: Cloud Run 部署後 CORS 錯誤（OPTIONS 405）
 
-確認後端 Cloud Run 服務的 `CORS_ORIGINS` 環境變數已設定為前端 URL：
+確認後端 Cloud Run 服務的 `CORS_ORIGINS` 環境變數已設定為前端對外網址：
 
 ```
-CORS_ORIGINS = https://your-frontend-url.a.run.app
+CORS_ORIGINS = https://ai-agent.onceagain.tw
 ```
+
+修改時記得用 `--update-env-vars` 而非 `--set-env-vars`（見〈後端部署〉的警告）。
 
 ### Q: 資料庫連線失敗
 
