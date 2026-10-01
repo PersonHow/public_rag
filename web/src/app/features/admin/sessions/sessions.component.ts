@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { SessionStatusResponse } from '../../../shared/models';
 import { ToastService } from '../../../core/services/toast.service';
 import { PreviewService } from '../../../core/services/preview.service';
+import { CompanyContextService } from '../../../core/services/company-context.service';
 import { PageHeadComponent } from '../../../shared/components/page-head/page-head.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -19,11 +20,12 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
   templateUrl: './sessions.component.html',
   styleUrl: './sessions.component.scss',
 })
-export class AdminSessionsComponent implements OnInit {
+export class AdminSessionsComponent {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly preview = inject(PreviewService);
+  private readonly ctx = inject(CompanyContextService);
 
   readonly sessions = signal<SessionStatusResponse[]>([]);
   readonly loading = signal(false);
@@ -40,7 +42,24 @@ export class AdminSessionsComponent implements OnInit {
     return pend.length > 0 && pend.every(s => this.selected().has(s.session_id));
   });
 
-  ngOnInit(): void { this.load(); }
+  // 依租戶分組（後端已依 created_at desc 排序，組內維持原順序）
+  readonly groups = computed(() => {
+    const map = new Map<string, { companyId: string; companyName: string; sessions: SessionStatusResponse[] }>();
+    for (const s of this.sessions()) {
+      const key = s.company_id ?? '';
+      if (!map.has(key)) map.set(key, { companyId: key, companyName: s.company_name ?? '未知租戶', sessions: [] });
+      map.get(key)!.sessions.push(s);
+    }
+    return [...map.values()].sort((a, b) => a.companyName.localeCompare(b.companyName, 'zh-Hant'));
+  });
+
+  constructor() {
+    // 頂部 TENANT 切換時重新載入（interceptor 會自動帶 company_id）
+    effect(() => {
+      this.ctx.activeCompanyId();
+      untracked(() => this.load());
+    });
+  }
 
   async load(): Promise<void> {
     this.loading.set(true);

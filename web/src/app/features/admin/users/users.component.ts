@@ -8,11 +8,12 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TruncateIdPipe } from '../../../shared/pipes/truncate-id.pipe';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { PasswordToggleComponent } from '../../../shared/components/password-toggle/password-toggle.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [FormsModule, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe, ButtonComponent],
+  imports: [FormsModule, PageHeadComponent, StatusBadgeComponent, EmptyStateComponent, TruncateIdPipe, ButtonComponent, PasswordToggleComponent],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
 })
@@ -26,11 +27,21 @@ export class AdminUsersComponent implements OnInit {
   readonly apiError   = signal<string | null>(null);
   readonly showForm   = signal(false);
   readonly submitting = signal(false);
+  readonly showPassword = signal(false);
 
   readonly isSuperAdmin = this.auth.isSuperAdmin;
   readonly myCompanyId  = computed(() => this.auth.currentUser()?.company_id ?? null);
 
   form: UserCreate = { email: '', password: '', role: 'field_user', company_id: null };
+
+  // 與後端 app/schemas/user.py 的 password_strength 同步
+  readonly passwordRules = [
+    { label: '至少 12 碼',   test: (v: string) => v.length >= 12 },
+    { label: '大寫英文字母', test: (v: string) => /[A-Z]/.test(v) },
+    { label: '小寫英文字母', test: (v: string) => /[a-z]/.test(v) },
+    { label: '數字',         test: (v: string) => /\d/.test(v) },
+    { label: '符號',         test: (v: string) => /[^A-Za-z0-9]/.test(v) },
+  ];
 
   readonly availableRoles = computed<Array<'superadmin' | 'company_admin' | 'field_user'>>(() =>
     this.isSuperAdmin()
@@ -60,27 +71,34 @@ export class AdminUsersComponent implements OnInit {
       role: 'field_user',
       company_id: this.isSuperAdmin() ? null : this.myCompanyId(),
     };
+    this.showPassword.set(false);
     this.showForm.set(true);
+  }
+
+  passwordValid(): boolean {
+    return this.passwordRules.every(r => r.test(this.form.password));
   }
 
   cancelForm(): void { this.showForm.set(false); }
 
   async submit(): Promise<void> {
-    if (!this.form.email || !this.form.password) return;
+    if (!this.form.email || !this.passwordValid()) return;
     this.submitting.set(true);
     try {
       const payload: UserCreate = {
         email: this.form.email,
         password: this.form.password,
         role: this.form.role,
-        company_id: this.form.company_id || null,
+        company_id: this.form.role === 'superadmin' ? null : (this.form.company_id || null),
       };
       await this.admin.createUser(payload);
       this.toast.success('使用者已建立');
       this.showForm.set(false);
       await this.load();
     } catch (e: any) {
-      this.toast.error(e?.error?.detail ?? '建立失敗');
+      // 422 驗證錯誤的 detail 是陣列（FastAPI 格式）
+      const detail = e?.error?.detail;
+      this.toast.error((Array.isArray(detail) ? detail[0]?.msg : detail) ?? '建立失敗');
     } finally {
       this.submitting.set(false);
     }

@@ -11,18 +11,30 @@
 
 .uid { font-size: 11px; color: var(--muted); }
 
-/* ── Create user form panel ─────────────────────────── */
-.form-panel {
-  margin-bottom: 20px;
-}
-.form-panel__head {
+/* ── Create user dialog ─────────────────────────────── */
+.dialog-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; border-bottom: 1px solid var(--line);
 }
-.form-panel__body {
-  padding: 20px 16px;
-  display: flex; flex-direction: column; gap: 14px;
+.form-body {
+  display: flex; flex-direction: column; gap: 16px;
 }
-.form-panel__actions {
-  display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;
+
+.password-rules {
+  list-style: none; margin: 4px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--muted);
+
+  li.ok { color: var(--teal); }
+}
+
+.role-seg {
+  display: flex; border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink);
+}
+.role-seg-btn {
+  flex: 1; padding: 8px 6px; border: 0; background: var(--bg-2); color: var(--ink);
+  font-size: 11px; font-weight: 700; letter-spacing: .06em;
+
+  & + & { border-left: 1.5px solid var(--ink); }
+  &:hover { background: var(--bg-3); }
+  &.active { background: var(--ink); color: var(--cream); }
 }

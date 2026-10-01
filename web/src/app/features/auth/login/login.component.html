@@ -1,21 +1,6 @@
 <div class="login-wrap">
   <div class="login-bg-grid"></div>
 
-  <div class="login-corner tl">
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em">SYS / public-llm</div>
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">v4.0.0 · build 2026.04</div>
-  </div>
-  <div class="login-corner tr">
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">STATUS</div>
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--teal)">▣ SECURE</div>
-  </div>
-  <div class="login-corner bl">
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">SOC2 · ISO27001</div>
-  </div>
-  <div class="login-corner br">
-    <div class="px-mono" style="font-size:10px;letter-spacing:.2em;color:var(--muted)">RoHS · REACH</div>
-  </div>
-
   <!-- Left hero -->
   <div class="login-hero">
     <div class="brand-row big">
@@ -53,7 +38,10 @@
         </label>
         <label class="field">
           <span class="px-label">// PASSWORD</span>
-          <input class="mono" type="password" [(ngModel)]="password" name="password" placeholder="••••••••" required />
+          <div class="password-wrap">
+            <input class="mono" [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" name="password" placeholder="••••••••" required />
+            <app-password-toggle [visible]="showPassword()" (toggled)="showPassword.set(!showPassword())" />
+          </div>
         </label>
         <app-button variant="rust" type="submit" [disabled]="loading()">
           {{ loading() ? '登入中…' : '[ 登入 ▸ ]' }}

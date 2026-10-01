@@ -40,27 +40,35 @@
         </tr>
       </thead>
       <tbody>
-        @for (s of sessions(); track s.session_id) {
-          <tr>
-            <td>
-              @if (s.status === 'pending_preview') {
-                <input type="checkbox" [checked]="isSelected(s.session_id)"
-                       (change)="toggle(s.session_id)" />
-              }
-            </td>
-            <td>{{ s.filename ?? '—' }}</td>
-            <td class="session-id mono" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
-            <td>
-              <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
-            </td>
-            <td>{{ s.preview_confirmed ? '✓' : '—' }}</td>
-            <td style="color:var(--rust);font-size:12px">{{ s.fail_reason ?? '—' }}</td>
-            <td>
-              @if (s.status === 'pending_preview') {
-                <a class="btn sm" [routerLink]="['/preview', s.session_id]">預覽 ▸</a>
-              }
+        @for (g of groups(); track g.companyId) {
+          <tr class="group-row">
+            <td colspan="7">
+              <span class="group-name">{{ g.companyName }}</span>
+              <span class="group-count mono">{{ g.sessions.length }} 筆</span>
             </td>
           </tr>
+          @for (s of g.sessions; track s.session_id) {
+            <tr>
+              <td>
+                @if (s.status === 'pending_preview') {
+                  <input type="checkbox" [checked]="isSelected(s.session_id)"
+                         (change)="toggle(s.session_id)" />
+                }
+              </td>
+              <td>{{ s.filename ?? '—' }}</td>
+              <td class="session-id mono" [title]="s.session_id">{{ s.session_id | truncateId }}</td>
+              <td>
+                <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
+              </td>
+              <td>{{ s.preview_confirmed ? '✓' : '—' }}</td>
+              <td style="color:var(--rust);font-size:12px">{{ s.fail_reason ?? '—' }}</td>
+              <td>
+                @if (s.status === 'pending_preview') {
+                  <a class="btn sm" [routerLink]="['/preview', s.session_id]">預覽 ▸</a>
+                }
+              </td>
+            </tr>
+          }
         }
       </tbody>
     </table>

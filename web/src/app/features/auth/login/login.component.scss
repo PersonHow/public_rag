@@ -14,17 +14,6 @@
   opacity: .05; pointer-events: none;
 }
 
-.login-corner {
-  position: absolute; padding: 18px 22px;
-  display: flex; flex-direction: column; gap: 4px;
-  z-index: 2; pointer-events: none;
-
-  &.tl { top: 0; left: 0; }
-  &.tr { top: 0; right: 0; text-align: right; align-items: flex-end; }
-  &.bl { bottom: 0; left: 0; }
-  &.br { bottom: 0; right: 0; text-align: right; align-items: flex-end; }
-}
-
 .login-hero {
   position: relative; z-index: 1;
   background: var(--bg-2);
@@ -94,6 +83,8 @@
 
   &:focus { border-color: var(--rust); outline: none; box-shadow: 0 0 0 2px var(--rust); }
 }
+// 上面的 padding 會蓋掉全域 .password-wrap 的右側留白，這裡補回給切換按鈕
+.login-grid .field .password-wrap input { padding-right: 40px; }
 
 .login-error {
   color: var(--rust); font-size: 12px; margin-bottom: 10px;
@@ -101,5 +92,4 @@
 
 @media (max-width: 880px) {
   .login-wrap { grid-template-columns: 1fr; padding: 60px 24px; }
-  .login-corner { display: none; }
 }

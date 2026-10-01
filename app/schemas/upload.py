@@ -22,6 +22,8 @@ class SessionStatusResponse(BaseModel):
     fail_reason: str | None = None
     preview_confirmed: bool
     filename: str | None = None
+    company_id: uuid.UUID | None = None
+    company_name: str | None = None
 
 
 class ConfirmResponse(BaseModel):

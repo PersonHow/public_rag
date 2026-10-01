@@ -36,8 +36,8 @@ class Settings(BaseSettings):
 
     # ── Database ─────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_db"
-    DB_POOL_SIZE_MIN: int = 5
-    DB_POOL_SIZE_MAX: int = 20
+    DB_POOL_SIZE_MIN: int = 2
+    DB_POOL_SIZE_MAX: int = 5
     DB_POOL_TIMEOUT: int = 30
 
     # ── GCS ──────────────────────────────────────────────

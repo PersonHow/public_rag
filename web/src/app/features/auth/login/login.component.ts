@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { PasswordToggleComponent } from '../../../shared/components/password-toggle/password-toggle.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, ButtonComponent],
+  imports: [FormsModule, ButtonComponent, PasswordToggleComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -20,6 +21,7 @@ export class LoginComponent {
   email    = '';
   password = '';
   loading  = signal(false);
+  showPassword = signal(false);
   errorMsg = signal('');
 
   async onSubmit(): Promise<void> {

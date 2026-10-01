@@ -1,6 +1,7 @@
 <div class="empty-state mono">
   @if (loading()) {
-    ⏳ 載入中…
+    <div class="px-loader loading-bar" role="progressbar" aria-label="載入中"></div>
+    載入中…
   } @else {
     <div class="empty-icon">{{ icon() }}</div>
     {{ message() }}

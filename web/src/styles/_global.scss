@@ -100,6 +100,29 @@ h1, h2, h3, h4 { font-family: var(--font-mono) !important; letter-spacing: -.005
   opacity: .4; margin: 14px 0;
 }
 
+// 以 .px-rule 斜紋為底的 loading 條，rust 色塊由左至右重複移動
+// 斜紋放 ::before 才能單獨降透明度，不影響色塊
+.px-loader {
+  position: relative; height: 6px; overflow: hidden;
+
+  &::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, var(--ink) 0 4px, transparent 4px 8px);
+    opacity: .4;
+  }
+
+  &::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 20%;
+    background: var(--rust);
+    animation: px-loader-slide 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes px-loader-slide {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(500%); }
+}
+
 .px-label  { @include mono-tag; display: block; margin-bottom: 4px; }
 .px-mono   { font-family: var(--font-mono); font-weight: 700; letter-spacing: .04em; }
 .px-tag    { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
@@ -200,6 +223,21 @@ textarea, select {
 }
 
 textarea { resize: vertical; min-height: 88px; }
+
+// 密碼欄位的顯示／隱藏切換（登入頁、新增使用者共用）
+.password-wrap {
+  position: relative;
+
+  input { width: 100%; padding-right: 40px; }
+}
+.password-toggle {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; background: transparent; color: var(--muted);
+
+  &:hover { color: var(--ink); }
+  &:focus-visible { outline: 2px solid var(--rust); outline-offset: 1px; }
+}
 
 select {
   cursor: pointer; padding-right: 32px;

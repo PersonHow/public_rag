@@ -449,8 +449,8 @@ curl http://localhost:8000/ready
 | `JWT_EXPIRE_HOURS` | JWT 有效期（小時） | `24` | 否 |
 | `INTERNAL_TOKEN` | Cloud Tasks worker 驗證 token | 無 | 是 |
 | `DATABASE_URL` | PostgreSQL 連線字串（asyncpg 格式） | localhost | 是 |
-| `DB_POOL_SIZE_MIN` | 連線池最小連線數 | `5` | 否 |
-| `DB_POOL_SIZE_MAX` | 連線池最大連線數 | `20` | 否 |
+| `DB_POOL_SIZE_MIN` | 連線池最小連線數 | `2` | 否 |
+| `DB_POOL_SIZE_MAX` | 連線池最大連線數（× Cloud Run 最大實例數不可超過 Cloud SQL max_connections） | `5` | 否 |
 | `GCS_BUCKET_NAME` | GCS bucket 名稱 | `your-rag-bucket` | 是 |
 | `GCS_PROJECT` | GCP 專案 ID | 空 | 是 |
 | `CLOUD_TASKS_PROJECT` | Cloud Tasks GCP 專案 ID | 空 | 是 |

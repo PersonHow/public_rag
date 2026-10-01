@@ -10,46 +10,57 @@
 
 <!-- ── 建立使用者表單 ───────────────────────────────────────── -->
 @if (showForm()) {
-  <div class="form-panel card">
-    <div class="form-panel__head">
-      <span class="px-mono" style="font-size:11px;letter-spacing:.1em">NEW USER</span>
-      <app-button variant="icon" (click)="cancelForm()" title="關閉">✕</app-button>
-    </div>
+  <div class="scrim" (click)="cancelForm()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <header class="dialog-head">
+        <h3>新增使用者</h3>
+        <app-button variant="icon" (click)="cancelForm()" title="關閉">✕</app-button>
+      </header>
 
-    <div class="form-panel__body">
-      <div class="field">
-        <label>Email</label>
-        <input type="email" [(ngModel)]="form.email" placeholder="user@example.com" />
-      </div>
-
-      <div class="field">
-        <label>密碼</label>
-        <input type="password" [(ngModel)]="form.password" placeholder="至少 8 碼" />
-      </div>
-
-      <div class="field">
-        <label>角色</label>
-        <select [(ngModel)]="form.role">
-          @for (r of availableRoles(); track r) {
-            <option [value]="r">{{ r }}</option>
-          }
-        </select>
-      </div>
-
-      @if (isSuperAdmin()) {
+      <div class="body form-body">
         <div class="field">
-          <label>Company ID <span style="color:var(--muted);font-size:10px">（superadmin 可留空）</span></label>
-          <input type="text" [(ngModel)]="form.company_id"
-            placeholder="UUID（superadmin 可不填）" />
+          <label>Email</label>
+          <input type="email" [(ngModel)]="form.email" placeholder="user@example.com" autocomplete="off" />
         </div>
-      }
 
-      <div class="form-panel__actions">
+        <div class="field">
+          <label>密碼</label>
+          <div class="password-wrap">
+            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="form.password"
+              placeholder="至少 12 碼" autocomplete="new-password" />
+            <app-password-toggle [visible]="showPassword()" (toggled)="showPassword.set(!showPassword())" />
+          </div>
+          <ul class="password-rules">
+            @for (r of passwordRules; track r.label) {
+              <li [class.ok]="r.test(form.password)">{{ r.test(form.password) ? '✓' : '·' }} {{ r.label }}</li>
+            }
+          </ul>
+        </div>
+
+        <div class="field">
+          <label>角色</label>
+          <div class="role-seg">
+            @for (r of availableRoles(); track r) {
+              <button type="button" class="role-seg-btn mono"
+                [class.active]="form.role === r" (click)="form.role = r">{{ r }}</button>
+            }
+          </div>
+        </div>
+
+        @if (isSuperAdmin() && form.role !== 'superadmin') {
+          <div class="field">
+            <label>Company ID</label>
+            <input type="text" [(ngModel)]="form.company_id" placeholder="租戶 UUID" />
+          </div>
+        }
+      </div>
+
+      <footer>
         <app-button (click)="cancelForm()">取消</app-button>
-        <app-button variant="primary" [disabled]="submitting()" (click)="submit()">
+        <app-button variant="primary" [disabled]="submitting() || !passwordValid()" (click)="submit()">
           {{ submitting() ? '建立中…' : '建立使用者' }}
         </app-button>
-      </div>
+      </footer>
     </div>
   </div>
 }

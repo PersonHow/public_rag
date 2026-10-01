@@ -23,6 +23,7 @@ from app.core.database import get_db, get_session_factory
 from app.core.logging import get_logger
 from app.core.dependencies import require_roles
 from app.models.chunk import Chunk
+from app.models.company import Company
 from app.models.document import Document
 from app.models.session import IngestionSession
 from app.schemas.upload import ConfirmResponse, SessionStatusResponse
@@ -321,11 +322,15 @@ async def list_sessions(
     Sessions 列表（v2：僅 superadmin）。
     - 可搭配 ?company_id= query param 過濾單一租戶（superadmin 切換公司時前端會自動帶入）
     """
-    query = select(IngestionSession)
+    query = select(IngestionSession, Company.name).join(
+        Company, Company.company_id == IngestionSession.company_id
+    )
     if company_id is not None:
         query = query.where(IngestionSession.company_id == company_id)
     result = await db.execute(query.order_by(IngestionSession.created_at.desc()).limit(100))
-    sessions = result.scalars().all()
+    rows = result.all()
+    sessions = [s for s, _ in rows]
+    company_name_by_session = {s.session_id: name for s, name in rows}
 
     # 一次撈出這批 session 的檔名，避免 N+1（每個 session 僅一份 document）
     session_ids = [s.session_id for s in sessions]
@@ -345,6 +350,8 @@ async def list_sessions(
             fail_reason=s.fail_reason,
             preview_confirmed=s.preview_confirmed,
             filename=filename_by_session.get(s.session_id),
+            company_id=s.company_id,
+            company_name=company_name_by_session[s.session_id],
         )
         for s in sessions
     ]

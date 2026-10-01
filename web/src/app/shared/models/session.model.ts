@@ -12,6 +12,8 @@ export interface SessionStatusResponse {
   fail_reason: string | null;
   preview_confirmed: boolean;
   filename?: string | null;
+  company_id?: string | null;
+  company_name?: string | null;
 }
 
 export interface ConfirmResponse {
