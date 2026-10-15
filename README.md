@@ -497,9 +497,10 @@ curl http://localhost:8000/ready
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | `POST` | `/companies` | 建立公司 |
-| `GET` | `/companies` | 列出所有公司 |
+| `GET` | `/companies` | 列出所有公司（含 session 數） |
+| `PUT` | `/companies/{id}` | 修改公司名稱、產業、負責人聯絡資訊 |
 | `POST` | `/users` | 建立使用者 |
-| `GET` | `/users` | 列出使用者 |
+| `GET` | `/users` | 列出使用者（含所屬公司名稱） |
 
 ### Internal 端點（Cloud Tasks 呼叫）
 

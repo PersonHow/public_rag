@@ -99,12 +99,15 @@ async def list_users(
     if current_user.role == "field_user":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    query = select(User)
+    query = select(User, Company.name).outerjoin(Company, Company.company_id == User.company_id)
     if current_user.role == "company_admin":
         query = query.where(User.company_id == current_user.company_id)
 
     result = await db.execute(query.order_by(User.email))
-    return result.scalars().all()
+    return [
+        UserResponse.model_validate(user).model_copy(update={"company_name": company_name})
+        for user, company_name in result.all()
+    ]
 
 
 @router.patch("/{user_id}/deactivate", response_model=UserResponse)

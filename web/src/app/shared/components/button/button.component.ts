@@ -7,7 +7,8 @@ type BtnSize    = 'default' | 'sm';
   selector: 'app-button',
   standalone: true,
   templateUrl: './button.component.html',
-  host: { style: 'display:contents' },
+  // 不用 host style：CSP 只放行帶 nonce 的 <style>，style 屬性會被擋
+  styles: [':host { display: contents; }'],
 })
 export class ButtonComponent {
   readonly variant  = input<BtnVariant>('default');

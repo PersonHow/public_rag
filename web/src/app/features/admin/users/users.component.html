@@ -2,7 +2,7 @@
   stamp="ADMIN · USERS"
   title="使用者管理"
   desc="租戶成員與角色管理">
-  <div actions style="display:flex;gap:8px">
+  <div actions class="row">
     <app-button (click)="load()">↺ 重新整理</app-button>
     <app-button variant="primary" (click)="openForm()">＋ 新增使用者</app-button>
   </div>
@@ -49,15 +49,20 @@
 
         @if (isSuperAdmin() && form.role !== 'superadmin') {
           <div class="field">
-            <label>Company ID</label>
-            <input type="text" [(ngModel)]="form.company_id" placeholder="租戶 UUID" />
+            <label>租戶</label>
+            <select [(ngModel)]="form.company_id">
+              <option [ngValue]="null" disabled>請選擇租戶</option>
+              @for (c of companies(); track c.company_id) {
+                <option [ngValue]="c.company_id">{{ c.name }}</option>
+              }
+            </select>
           </div>
         }
       </div>
 
       <footer>
         <app-button (click)="cancelForm()">取消</app-button>
-        <app-button variant="primary" [disabled]="submitting() || !passwordValid()" (click)="submit()">
+        <app-button variant="primary" [disabled]="submitting() || !passwordValid() || companyMissing()" (click)="submit()">
           {{ submitting() ? '建立中…' : '建立使用者' }}
         </app-button>
       </footer>
@@ -69,13 +74,13 @@
 @if (loading() || (!loading() && users().length === 0 && !showForm())) {
   <app-empty-state [loading]="loading()" message="無使用者資料">
     @if (apiError()) {
-      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
+      <div class="api-error">{{ apiError() }}</div>
     }
   </app-empty-state>
 }
 
 @if (!loading() && users().length > 0) {
-  <div class="card" style="padding:0;overflow:hidden">
+  <div class="card card-table">
     <table class="users-table">
       <thead>
         <tr>
@@ -83,7 +88,7 @@
           <th>Email</th>
           <th>角色</th>
           <th>狀態</th>
-          <th>Company</th>
+          <th>租戶</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -100,9 +105,7 @@
                 [label]="u.is_active ? '啟用' : '停用'"
                 [color]="u.is_active ? 'teal' : 'rust'" />
             </td>
-            <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">
-              {{ u.company_id ?? '—' }}
-            </td>
+            <td [title]="u.company_id ?? ''">{{ u.company_name ?? '—' }}</td>
             <td>
               @if (u.is_active) {
                 <app-button variant="danger" size="sm" (click)="deactivate(u)">停用</app-button>

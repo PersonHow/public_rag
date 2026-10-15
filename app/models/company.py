@@ -21,6 +21,9 @@ class Company(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     industry: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    contact_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(300), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

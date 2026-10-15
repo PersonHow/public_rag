@@ -32,3 +32,6 @@
   box-shadow: 4px 4px 0 var(--rust);
   padding: 10px 14px; margin-bottom: 14px;
 }
+.selected-count { font-size: 12px; color: var(--muted); }
+.col-check { width: 36px; }
+.fail-reason { color: var(--rust); font-size: 12px; }

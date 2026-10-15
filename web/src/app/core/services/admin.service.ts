@@ -9,6 +9,7 @@ export interface UserRow {
   role: string;
   is_active: boolean;
   company_id: string | null;
+  company_name: string | null;
 }
 
 export interface UserCreate {
@@ -22,12 +23,21 @@ export interface CompanyRow {
   company_id: string;
   name: string;
   industry: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
   is_active: boolean;
+  created_at: string;
+  /** 只有 GET /companies 列表會帶 */
+  session_count: number | null;
 }
 
 export interface CompanyCreate {
   name: string;
   industry?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,6 +67,10 @@ export class AdminService {
 
   createCompany(data: CompanyCreate): Promise<CompanyRow> {
     return firstValueFrom(this.http.post<CompanyRow>(`${this.base}/companies`, data));
+  }
+
+  updateCompany(companyId: string, data: CompanyCreate): Promise<CompanyRow> {
+    return firstValueFrom(this.http.put<CompanyRow>(`${this.base}/companies/${companyId}`, data));
   }
 
   deactivateCompany(companyId: string): Promise<CompanyRow> {

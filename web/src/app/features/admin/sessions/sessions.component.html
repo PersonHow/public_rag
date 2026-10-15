@@ -12,8 +12,8 @@
 @if (!loading() && sessions().length > 0) {
   @if (selectedCount() > 0) {
     <div class="batch-bar">
-      <span class="px-mono" style="font-size:12px;color:var(--muted)">已選取 {{ selectedCount() }} 份</span>
-      <span style="flex:1"></span>
+      <span class="px-mono selected-count">已選取 {{ selectedCount() }} 份</span>
+      <span class="grow"></span>
       <app-button variant="ghost" size="sm" [disabled]="batchLoading()" (click)="previewSelected()">
         預覽選取 ({{ selectedCount() }}) ▸
       </app-button>
@@ -22,11 +22,11 @@
       </app-button>
     </div>
   }
-  <div class="card" style="padding:0;overflow:hidden">
+  <div class="card card-table">
     <table class="sessions-table">
       <thead>
         <tr>
-          <th style="width:36px">
+          <th class="col-check">
             <input type="checkbox" [checked]="allPendingSelected()"
                    [disabled]="pendingSessions().length === 0"
                    (change)="toggleAll()" />
@@ -61,7 +61,7 @@
                 <app-status-badge [label]="s.status" [color]="statusColor(s.status)" />
               </td>
               <td>{{ s.preview_confirmed ? '✓' : '—' }}</td>
-              <td style="color:var(--rust);font-size:12px">{{ s.fail_reason ?? '—' }}</td>
+              <td class="fail-reason">{{ s.fail_reason ?? '—' }}</td>
               <td>
                 @if (s.status === 'pending_preview') {
                   <a class="btn sm" [routerLink]="['/preview', s.session_id]">預覽 ▸</a>
@@ -81,6 +81,6 @@
 @if (apiError()) {
   <div class="api-error mono">
     ⚠ {{ apiError() }}<br/>
-    <span style="color:var(--muted)">Sessions 列表 API 尚未實作（Phase 2+），顯示空列表。</span>
+    <span class="mut">Sessions 列表 API 尚未實作（Phase 2+），顯示空列表。</span>
   </div>
 }

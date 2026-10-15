@@ -149,3 +149,9 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
   }
 }
+.session-line { color: var(--muted); font-size: 13px; margin: 0; }
+.label-flush { margin: 0; }
+.file-count { font-size: 11px; color: var(--muted); }
+.files-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.loading-text { font-size: 12px; }
+.confirm-note { color: var(--muted); font-size: 12px; }

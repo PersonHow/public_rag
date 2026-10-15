@@ -2,82 +2,135 @@
   stamp="ADMIN · COMPANIES"
   title="租戶管理"
   desc="所有公司／租戶（superadmin 專用）">
-  <div actions style="display:flex;gap:8px">
+  <div actions class="row">
     <app-button (click)="load()">↺ 重新整理</app-button>
-    <app-button variant="primary" (click)="openForm()">＋ 新增租戶</app-button>
+    <app-button variant="primary" (click)="openCreate()">＋ 新增租戶</app-button>
   </div>
 </app-page-head>
 
-<!-- ── 建立租戶表單 ─────────────────────────────────────────── -->
-@if (showForm()) {
-  <div class="form-panel card">
-    <div class="form-panel__head">
-      <span class="px-mono" style="font-size:11px;letter-spacing:.1em">NEW COMPANY</span>
-      <app-button variant="icon" (click)="cancelForm()" title="關閉">✕</app-button>
-    </div>
-
-    <div class="form-panel__body">
-      <div class="field">
-        <label>公司名稱 <span style="color:var(--rust)">*</span></label>
-        <input type="text" [(ngModel)]="form.name" placeholder="Acme Corp" />
+<div class="co-layout" [class.has-panel]="panelMode()">
+  <!-- ── 租戶列表 ─────────────────────────────────────────────── -->
+  <div class="co-list">
+    @if (loading() || companies().length === 0) {
+      <app-empty-state [loading]="loading()" message="無租戶資料">
+        @if (apiError()) {
+          <div class="api-error">{{ apiError() }}</div>
+        }
+      </app-empty-state>
+    } @else {
+      <div class="card card-table">
+        <table class="co-table">
+          <thead>
+            <tr>
+              <th>Company ID</th>
+              <th>公司名稱</th>
+              <th>產業</th>
+              <th class="num">Sessions</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of companies(); track c.company_id) {
+              <tr class="co-row" [class.selected]="selected()?.company_id === c.company_id" (click)="select(c)">
+                <td class="uid mono">{{ c.company_id | truncateId }}</td>
+                <td><strong>{{ c.name }}</strong></td>
+                <td class="industry">{{ c.industry ?? '—' }}</td>
+                <td class="num mono">{{ c.session_count ?? 0 }}</td>
+                <td>
+                  <app-status-badge
+                    [label]="c.is_active ? '啟用' : '停用'"
+                    [color]="c.is_active ? 'teal' : 'rust'" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-
-      <div class="field">
-        <label>產業 <span style="color:var(--muted);font-size:10px">（選填）</span></label>
-        <input type="text" [(ngModel)]="form.industry"
-          placeholder="製造業、航空、半導體…" />
-      </div>
-
-      <div class="form-panel__actions">
-        <app-button (click)="cancelForm()">取消</app-button>
-        <app-button variant="primary" [disabled]="submitting() || !form.name.trim()" (click)="submit()">
-          {{ submitting() ? '建立中…' : '建立租戶' }}
-        </app-button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ── 租戶列表 ─────────────────────────────────────────────── -->
-@if (loading() || (!loading() && companies().length === 0 && !showForm())) {
-  <app-empty-state [loading]="loading()" message="無租戶資料">
-    @if (apiError()) {
-      <div style="margin-top:12px;font-size:11px;color:var(--rust)">{{ apiError() }}</div>
     }
-  </app-empty-state>
-}
+  </div>
 
-@if (!loading() && companies().length > 0) {
-  <div class="card" style="padding:0;overflow:hidden">
-    <table class="co-table">
-      <thead>
-        <tr>
-          <th>Company ID</th>
-          <th>公司名稱</th>
-          <th>產業</th>
-          <th>狀態</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (c of companies(); track c.company_id) {
-          <tr>
-            <td class="uid mono">{{ c.company_id | truncateId }}</td>
-            <td><strong>{{ c.name }}</strong></td>
-            <td style="color:var(--muted);font-size:12px">{{ c.industry ?? '—' }}</td>
-            <td>
+  <!-- ── 右側面板 ─────────────────────────────────────────────── -->
+  @if (panelMode(); as mode) {
+    <aside class="co-panel card">
+      <div class="co-panel__head">
+        <span class="px-mono co-panel__title">
+          @switch (mode) {
+            @case ('create') { NEW COMPANY }
+            @case ('edit')   { EDIT COMPANY }
+            @default         { COMPANY DETAIL }
+          }
+        </span>
+        <app-button variant="icon" (click)="closePanel()" title="關閉">✕</app-button>
+      </div>
+
+      @if (mode === 'view' && selected(); as c) {
+        <div class="co-panel__body">
+          <h3 class="co-name">{{ c.name }}</h3>
+          <dl class="co-detail">
+            <dt>Company ID</dt> <dd class="mono">{{ c.company_id }}</dd>
+            <dt>產業</dt>       <dd>{{ c.industry ?? '—' }}</dd>
+            <dt>負責人</dt>     <dd>{{ c.contact_name ?? '—' }}</dd>
+            <dt>電話</dt>       <dd class="mono">{{ c.contact_phone ?? '—' }}</dd>
+            <dt>Email</dt>      <dd class="mono">{{ c.contact_email ?? '—' }}</dd>
+            <dt>Sessions</dt>   <dd class="mono">{{ c.session_count ?? 0 }}</dd>
+            <dt>建立時間</dt>   <dd class="mono">{{ c.created_at | date: 'yyyy-MM-dd HH:mm' }}</dd>
+            <dt>狀態</dt>
+            <dd>
               <app-status-badge
                 [label]="c.is_active ? '啟用' : '停用'"
                 [color]="c.is_active ? 'teal' : 'rust'" />
-            </td>
-            <td>
-              @if (c.is_active) {
-                <app-button variant="danger" size="sm" (click)="deactivate(c)">停用</app-button>
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-}
+            </dd>
+          </dl>
+          <div class="co-panel__actions">
+            @if (c.is_active) {
+              <app-button variant="danger" (click)="deactivate(c)">停用</app-button>
+            }
+            <app-button variant="primary" (click)="openEdit(c)">編輯</app-button>
+          </div>
+        </div>
+      } @else {
+        <div class="co-panel__body">
+          <div class="field required">
+            <label>公司名稱</label>
+            <input type="text" [(ngModel)]="form.name" placeholder="Acme Corp" />
+          </div>
+
+          <div class="field">
+            <label>產業 <span class="optional">（選填）</span></label>
+            <input type="text" [(ngModel)]="form.industry" placeholder="製造業、航空、半導體…" />
+          </div>
+
+          <div class="co-section">負責人 <span class="optional">（皆選填）</span></div>
+
+          <div class="field">
+            <label>姓名</label>
+            <input type="text" [(ngModel)]="form.contact_name" placeholder="王小明" />
+          </div>
+
+          <div class="field">
+            <label>電話</label>
+            <input type="tel" [(ngModel)]="form.contact_phone" placeholder="02-1234-5678" />
+          </div>
+
+          <div class="field">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="form.contact_email" #emailModel="ngModel" email
+              placeholder="contact@acme.com" />
+            @if (emailModel.invalid && form.contact_email) {
+              <span class="field-error">Email 格式不正確</span>
+            }
+          </div>
+
+          <div class="co-panel__actions">
+            <app-button (click)="cancelForm()">取消</app-button>
+            <app-button variant="primary" [disabled]="submitting() || !form.name.trim() || !!emailModel.invalid"
+              (click)="submit()">
+              @if (mode === 'edit') { {{ submitting() ? '儲存中…' : '儲存變更' }} }
+              @else { {{ submitting() ? '建立中…' : '建立租戶' }} }
+            </app-button>
+          </div>
+        </div>
+      }
+    </aside>
+  }
+</div>

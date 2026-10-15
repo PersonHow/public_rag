@@ -1,6 +1,6 @@
 <div class="page-head">
-  <div style="display: flex; align-items: center;">
-    <h1 style="margin-right: 16px;">{{ title() }}</h1>
+  <div class="page-head__title">
+    <h1>{{ title() }}</h1>
     @if (desc()) { <p class="page-desc">{{ desc() }}</p> }
     <ng-content select="[subtitle]" />
   </div>

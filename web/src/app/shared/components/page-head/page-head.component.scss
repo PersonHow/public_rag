@@ -22,3 +22,10 @@
   font-size: 13px;
   margin: 0;
 }
+
+.page-head__title {
+  display: flex;
+  align-items: center;
+
+  h1 { margin-right: 16px; }
+}

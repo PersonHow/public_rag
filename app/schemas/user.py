@@ -36,6 +36,8 @@ class UserResponse(BaseModel):
     email: str
     role: str
     company_id: Optional[uuid.UUID] = None
+    # 只有 GET /users 列表會帶
+    company_name: Optional[str] = None
     is_active: bool
     last_login_at: Optional[datetime] = None
 

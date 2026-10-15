@@ -5,7 +5,7 @@
   desc="把 PDF、Word、CAD 工檔交給模型解析。處理完成後會出現可確認的預覽。">
   <div actions class="row">
     <app-button variant="primary" (click)="fileInput.click()">↑ 選擇檔案</app-button>
-    <input #fileInput type="file" multiple style="display:none"
+    <input #fileInput type="file" multiple class="hide"
            accept=".pdf,.docx,.tap,.nc,.dxf"
            (change)="onFileChange($event)" />
   </div>
@@ -14,8 +14,8 @@
 <!-- Stats -->
 <div class="stat-row">
   <div class="stat"><div class="lab">上傳中</div><div class="v">{{ uploadingCount() }}</div></div>
-  <div class="stat"><div class="lab">已完成</div><div class="v" style="color:var(--teal)">{{ doneCount() }}</div></div>
-  <div class="stat"><div class="lab">失敗</div><div class="v" style="color:var(--rust)">{{ errorCount() }}</div></div>
+  <div class="stat"><div class="lab">已完成</div><div class="v v-done">{{ doneCount() }}</div></div>
+  <div class="stat"><div class="lab">失敗</div><div class="v v-failed">{{ errorCount() }}</div></div>
   <div class="stat accent"><div class="lab">限制</div><div class="v">50 MB</div></div>
 </div>
 
@@ -39,7 +39,7 @@
 @if (queue().length > 0) {
   @if (doneSessionIds().length > 1) {
     <div class="batch-bar">
-      <span class="px-mono" style="font-size:12px;color:var(--muted)">
+      <span class="px-mono job-summary">
         已完成 {{ doneSessionIds().length }} 份，可一次預覽與確認整批
       </span>
       <app-button variant="primary" size="sm" (click)="previewBatch()">
@@ -55,28 +55,28 @@
           <div class="q-name mono">
             {{ job.name }}
             @if (job.status === 'done') {
-              <span class="pill teal" style="margin-left:4px">完成</span>
+              <span class="pill teal status-pill">完成</span>
             }
             @if (job.status === 'error') {
-              <span class="pill rust" style="margin-left:4px">失敗</span>
+              <span class="pill rust status-pill">失敗</span>
             }
           </div>
           <div class="q-sub mono">{{ formatSize(job.size) }}</div>
           @if (job.status === 'uploading') {
-            <div class="progress-track" style="margin-top:8px">
+            <div class="progress-track job-progress">
               <div class="progress-bar" [style.width.%]="job.pct"></div>
             </div>
           }
           @if (job.status === 'error') {
             <div class="err-detail mono">
               <span class="err-code">ERR</span>
-              <span style="margin-left:8px;font-weight:600">{{ job.errorMsg }}</span>
+              <span class="job-error">{{ job.errorMsg }}</span>
             </div>
           }
         </div>
         <div class="status-cell">
           @if (job.status === 'uploading') {
-            <span class="px-mono" style="font-size:12px">{{ job.pct }}%</span>
+            <span class="px-mono job-pct">{{ job.pct }}%</span>
           }
         </div>
         <div class="actions-cell">
@@ -92,14 +92,14 @@
 
 <!-- Info -->
 <div class="card info-card">
-  <div class="row" style="gap:10px;margin-bottom:10px">
+  <div class="row info-head">
     <span class="pill teal dot">處理流程</span>
-    <h3 style="margin:0;font-size:15px;font-weight:700">上傳後會發生什麼？</h3>
+    <h3 class="info-title">上傳後會發生什麼？</h3>
   </div>
   <ol>
     <li>檔案上傳到租戶獨立的儲存空間（GCS）</li>
     <li>進入 RAG pipeline：文件解析 → 欄位抽取 → Chunk 分組</li>
-    <li>產出 <strong style="color:var(--ink)">Mirror View 預覽</strong>，可審視模型抽取是否正確</li>
+    <li>產出 <strong class="info-em">Mirror View 預覽</strong>，可審視模型抽取是否正確</li>
     <li>管理員「確認」後，Chunks 才進入向量庫，可被 Chat 引用</li>
   </ol>
 </div>

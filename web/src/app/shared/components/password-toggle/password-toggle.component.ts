@@ -5,7 +5,8 @@ import { Component, input, output } from '@angular/core';
   selector: 'app-password-toggle',
   standalone: true,
   templateUrl: './password-toggle.component.html',
-  host: { style: 'display:contents' },
+  // 不用 host style：CSP 只放行帶 nonce 的 <style>，style 屬性會被擋
+  styles: [':host { display: contents; }'],
 })
 export class PasswordToggleComponent {
   readonly visible = input(false);

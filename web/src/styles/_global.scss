@@ -60,6 +60,9 @@ h1, h2, h3, h4 { font-family: var(--font-mono) !important; letter-spacing: -.005
   box-shadow: 5px 5px 0 var(--ink);
 }
 
+// 內含整張表格的卡片：表格貼齊邊框
+.card-table { padding: 0; overflow: hidden; }
+
 // ── Stats ─────────────────────────────────────────────────
 .stat {
   background: var(--bg-2); border: 1px solid var(--ink);

@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AdminService, UserRow, UserCreate } from '../../../core/services/admin.service';
+import { AdminService, UserRow, UserCreate, CompanyRow } from '../../../core/services/admin.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PageHeadComponent } from '../../../shared/components/page-head/page-head.component';
@@ -23,6 +23,7 @@ export class AdminUsersComponent implements OnInit {
   private readonly toast  = inject(ToastService);
 
   readonly users      = signal<UserRow[]>([]);
+  readonly companies  = signal<CompanyRow[]>([]);
   readonly loading    = signal(false);
   readonly apiError   = signal<string | null>(null);
   readonly showForm   = signal(false);
@@ -73,6 +74,21 @@ export class AdminUsersComponent implements OnInit {
     };
     this.showPassword.set(false);
     this.showForm.set(true);
+    if (this.isSuperAdmin()) this.loadCompanies();
+  }
+
+  // 每次開表單都重抓，剛建立的租戶才會出現在選單
+  private async loadCompanies(): Promise<void> {
+    try {
+      const all = await this.admin.getCompanies();
+      this.companies.set(all.filter(c => c.is_active));
+    } catch (e: any) {
+      this.toast.error(e?.error?.detail ?? '無法載入租戶清單');
+    }
+  }
+
+  companyMissing(): boolean {
+    return this.form.role !== 'superadmin' && !this.form.company_id;
   }
 
   passwordValid(): boolean {

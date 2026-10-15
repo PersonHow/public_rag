@@ -82,3 +82,13 @@
   box-shadow: 4px 4px 0 var(--rust);
   padding: 10px 14px; margin-bottom: 14px;
 }
+.stat .v-done { color: var(--teal); }
+.stat .v-failed { color: var(--rust); }
+.job-summary { font-size: 12px; color: var(--muted); }
+.status-pill { margin-left: 4px; }
+.job-progress { margin-top: 8px; }
+.job-error { margin-left: 8px; font-weight: 600; }
+.job-pct { font-size: 12px; }
+.info-head { gap: 10px; margin-bottom: 10px; }
+.info-title { margin: 0; font-size: 15px; font-weight: 700; }
+.info-em { color: var(--ink); }
